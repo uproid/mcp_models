@@ -1,14 +1,8 @@
-# Changelog
 
-All notable changes to this project will be documented in this file.
+## 1.0.1
+- Fixed Pubspec metadata
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [1.0.0] - 2026-05-08
-
-### Added
-
+## 1.0.0
 - Full Dart model coverage for the [MCP 2025-11-25 schema](https://modelcontextprotocol.io/specification/2025-11-25/schema).
 - `MCP` base interface with `toMap()` and named factory `TypeName.toMCP(Map)` on every type.
 - `MapMC<K,V>` / `MapModel<K,V>` base classes for types whose serialised form is the map itself.

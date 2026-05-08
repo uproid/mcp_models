@@ -1,8 +1,11 @@
 # mcp_models
 
-[![pub.dev](https://img.shields.io/pub/v/mcp_models.svg)](https://pub.dev/packages/mcp_models)
-[![Dart](https://github.com/uproid/mcp_models/actions/workflows/dart.yml/badge.svg)](https://github.com/uproid/mcp_models/actions/workflows/dart.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![pub package](https://img.shields.io/pub/v/mcp_models.svg)](https://pub.dev/packages/mcp_models)
+[![Dev](https://img.shields.io/pub/v/mcp_models.svg?label=dev&include_prereleases)](https://pub.dev/packages/mcp_models)
+[![Donate](https://img.shields.io/badge/Donate-support-pink.svg)](https://buymeacoffee.com/fardziao)
+[![issues-closed](https://img.shields.io/github/issues-closed/uproid/mcp_models?color=green)](https://github.com/uproid/mcp_models/issues?q=is%3Aissue+is%3Aclosed) 
+[![issues-open](https://img.shields.io/github/issues-raw/uproid/mcp_models)](https://github.com/uproid/mcp_models/issues) 
+[![Contributions](https://img.shields.io/github/contributors/uproid/mcp_models)](https://github.com/uproid/mcp_models/blob/master/CONTRIBUTING.md)
 
 Dart model classes for the [Model Context Protocol (MCP) 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/schema).
 
