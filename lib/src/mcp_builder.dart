@@ -3,10 +3,10 @@ import 'package:mcp_models/src/mcp_base.dart';
 // ── Handler type aliases ───────────────────────────────────────────────────────
 
 typedef ToolHandler = Future<CallToolResult> Function(CallToolRequest request);
-typedef ResourceHandler =
-    Future<ReadResourceResult> Function(ReadResourceRequest request);
-typedef PromptHandler =
-    Future<GetPromptResult> Function(GetPromptRequest request);
+typedef ResourceHandler = Future<ReadResourceResult> Function(
+    ReadResourceRequest request);
+typedef PromptHandler = Future<GetPromptResult> Function(
+    GetPromptRequest request);
 typedef MethodHandler = Future<MCP> Function(Map<String, Object?> payload);
 
 // ── Internal registration entries ─────────────────────────────────────────────
@@ -172,8 +172,8 @@ class McpBuilder {
       ListToolsResult(tools: _tools.values.map((e) => e.tool).toList());
 
   ListResourcesResult buildResourcesResult() => ListResourcesResult(
-    resources: _resources.values.map((e) => e.resource).toList(),
-  );
+        resources: _resources.values.map((e) => e.resource).toList(),
+      );
 
   ListPromptsResult buildPromptsResult() =>
       ListPromptsResult(prompts: _prompts.values.map((e) => e.prompt).toList());
