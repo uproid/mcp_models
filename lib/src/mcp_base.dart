@@ -327,20 +327,24 @@ enum Theme {
 
 /// Syslog-compatible log severity levels (RFC-5424).
 enum LoggingLevel {
-  debug,
-  info,
-  notice,
-  warning,
-  error,
-  critical,
-  alert,
-  emergency;
+  debug('debug'),
+  info('info'),
+  notice('notice'),
+  warning('warning'),
+  error('error'),
+  critical('critical'),
+  alert('alert'),
+  emergency('emergency');
+
+  final String value;
+
+  const LoggingLevel(this.value);
 
   factory LoggingLevel.to(String str) =>
-      LoggingLevel.values.firstWhere((e) => e.name == str);
+      LoggingLevel.values.firstWhere((e) => e.value == str);
 
   @override
-  String toString() => name;
+  String toString() => value;
 }
 
 /// Parameters shared by MCP notifications.
@@ -1086,9 +1090,13 @@ class ElicitRequestParams extends MCP {
 
 /// The user action in response to an elicitation request.
 enum ActionType {
-  accept,
-  decline,
-  cancel;
+  accept('accept'),
+  decline('decline'),
+  cancel('cancel');
+
+  final String name;
+
+  const ActionType(this.name);
 
   factory ActionType.to(String str) =>
       ActionType.values.firstWhere((e) => e.name == str);
@@ -1524,7 +1532,7 @@ enum StringFormat {
   final String value;
   const StringFormat(this.value);
 
-  static StringFormat to(String str) =>
+  factory StringFormat.to(String str) =>
       StringFormat.values.firstWhere((e) => e.value == str);
 
   @override
@@ -2028,6 +2036,8 @@ enum TaskStatus {
   const TaskStatus(this.value);
   @override
   String toString() => value;
+  static TaskStatus to(String str) =>
+      TaskStatus.values.firstWhere((e) => e.value == str);
 }
 
 /// Data associated with an MCP task.
@@ -2079,9 +2089,7 @@ class Task extends TaskStatusNotificationParams implements CancelTaskResult {
   factory Task.toMCP(Map<String, Object?> map) {
     return Task(
       taskId: map['taskId'] as String,
-      status: TaskStatus.values.firstWhere(
-        (e) => e.value == (map['status'] as String),
-      ),
+      status: TaskStatus.to(map['status'] as String),
       statusMessage: map['statusMessage'] as String?,
       createdAt: map['createdAt'] as String,
       lastUpdatedAt: map['lastUpdatedAt'] as String,
@@ -2440,6 +2448,10 @@ enum ResultType {
 
   final String value;
   const ResultType(this.value);
+  @override
+  String toString() => value;
+  static ResultType to(String str) =>
+      ResultType.values.firstWhere((e) => e.value == str);
 }
 
 class PromptListChangedNotification extends MCP {
@@ -2858,9 +2870,7 @@ abstract class CancelTaskResult implements MCP {
   factory CancelTaskResult.toMCP(Map<String, Object?> map) {
     return Task(
       taskId: map['taskId'] as String,
-      status: TaskStatus.values.firstWhere(
-        (e) => e.toString() == 'TaskStatus.${map['status']}',
-      ),
+      status: TaskStatus.to(map['status'] as String),
       createdAt: map['createdAt'] as String,
       lastUpdatedAt: map['lastUpdatedAt'] as String,
     );
@@ -2983,14 +2993,6 @@ class GetPromptResultResponse extends MCP {
   }
 }
 
-/*
-interface GetPromptResult {
-  _meta?: MetaObject;
-  resultType: ResultType;
-  description?: string;
-  messages: PromptMessage[];
-  [key: string]: unknown;
-}*/
 class GetPromptResult extends MapMC<String, Object?> {
   MetaObject? $meta;
   String? description;
@@ -3025,10 +3027,7 @@ class GetPromptResult extends MapMC<String, Object?> {
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'description' ||
-              key == 'messages',
+              key == '_meta' || key == 'description' || key == 'messages',
         ),
     );
   }
@@ -3119,15 +3118,6 @@ class ListPromptsResultResponse extends MCP {
   }
 }
 
-/*
-interface ListPromptsResult {
-  _meta?: MetaObject;
-  resultType: ResultType;
-  nextCursor?: string;
-  prompts: Prompt[];
-  [key: string]: unknown;
-}
-*/
 class ListPromptsResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
@@ -3138,7 +3128,6 @@ class ListPromptsResult extends MapMC<String, Object?> {
       .toList();
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set nextCursor(String? value) => data['nextCursor'] = value;
   set prompts(List<Prompt> value) =>
       data['prompts'] = value.map((e) => e.toMap()).toList();
@@ -3171,11 +3160,7 @@ class ListPromptsResult extends MapMC<String, Object?> {
           .toList(),
       additionalData: Map.from(map)
         ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'nextCursor' ||
-              key == 'prompts',
+          (key, _) => key == '_meta' || key == 'nextCursor' || key == 'prompts',
         ),
     );
   }
@@ -3360,28 +3345,16 @@ class ListResourcesResultResponse extends MCP {
   }
 }
 
-/*
-interface ListResourcesResult {
-  _meta?: MetaObject;
-  resultType: ResultType;
-  nextCursor?: string;
-  resources: Resource[];
-  [key: string]: unknown;
-}
-*/
 class ListResourcesResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
   String? get nextCursor => data['nextCursor'] as String?;
   List<Resource> get resources => (data['resources'] as List<dynamic>)
       .map((e) => Resource.toMCP(e as Map<String, Object?>))
       .toList();
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set nextCursor(String? value) => data['nextCursor'] = value;
   set resources(List<Resource> value) =>
       data['resources'] = value.map((e) => e.toMap()).toList();
@@ -3415,10 +3388,7 @@ class ListResourcesResult extends MapMC<String, Object?> {
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'nextCursor' ||
-              key == 'resources',
+              key == '_meta' || key == 'nextCursor' || key == 'resources',
         ),
     );
   }
@@ -3616,25 +3586,15 @@ class ReadResourceResultResponse extends MCP {
   }
 }
 
-/*
-interface ReadResourceResult {
-  _meta?: MetaObject;
-  resultType: ResultType;
-  contents: (TextResourceContents | BlobResourceContents)[];
-  [key: string]: unknown;
-}*/
 class ReadResourceResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
   List<ResourceContents> get contents => (data['contents'] as List<dynamic>)
       .map((e) => ResourceContents.toMCP(e as Map<String, Object?>))
       .toList();
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set contents(List<ResourceContents> value) =>
       data['contents'] = value.map((e) => e.toMap()).toList();
 
@@ -3663,8 +3623,7 @@ class ReadResourceResult extends MapMC<String, Object?> {
           .toList(),
       additionalData: Map.from(map)
         ..removeWhere(
-          (key, _) =>
-              key == '_meta' || key == 'resultType' || key == 'contents',
+          (key, _) => key == '_meta' || key == 'contents',
         ),
     );
   }
@@ -3795,8 +3754,6 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
   String? get nextCursor => data['nextCursor'] as String?;
   List<ResourceTemplate> get resourceTemplates =>
       (data['resourceTemplates'] as List<dynamic>)
@@ -3804,7 +3761,6 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
           .toList();
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set nextCursor(String? value) => data['nextCursor'] = value;
   set resourceTemplates(List<ResourceTemplate> value) =>
       data['resourceTemplates'] = value.map((e) => e.toMap()).toList();
@@ -3839,7 +3795,6 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
         ..removeWhere(
           (key, _) =>
               key == '_meta' ||
-              key == 'resultType' ||
               key == 'nextCursor' ||
               key == 'resourceTemplates',
         ),
@@ -4612,8 +4567,6 @@ class CallToolResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
   List<ContentBlock> get content => (data['content'] as List<dynamic>)
       .map((e) => ContentBlock.toMCP(e as Map<String, Object?>))
       .toList();
@@ -4622,7 +4575,6 @@ class CallToolResult extends MapMC<String, Object?> {
   bool? get isError => data['isError'] as bool?;
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set content(List<ContentBlock> value) =>
       data['content'] = value.map((e) => e.toMap()).toList();
   set structuredContent(Map<String, Object?>? value) =>
@@ -4662,7 +4614,6 @@ class CallToolResult extends MapMC<String, Object?> {
         ..removeWhere(
           (key, _) =>
               key == '_meta' ||
-              key == 'resultType' ||
               key == 'content' ||
               key == 'structuredContent' ||
               key == 'isError',
@@ -4743,15 +4694,12 @@ class ListToolsResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
       ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
   String? get nextCursor => data['nextCursor'] as String?;
   List<Tool> get tools => (data['tools'] as List<dynamic>)
       .map((e) => Tool.toMCP(e as Map<String, Object?>))
       .toList();
 
   set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
   set nextCursor(String? value) => data['nextCursor'] = value;
   set tools(List<Tool> value) =>
       data['tools'] = value.map((e) => e.toMap()).toList();
@@ -4784,11 +4732,7 @@ class ListToolsResult extends MapMC<String, Object?> {
           .toList(),
       additionalData: Map.from(map)
         ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'nextCursor' ||
-              key == 'tools',
+          (key, _) => key == '_meta' || key == 'nextCursor' || key == 'tools',
         ),
     );
   }
