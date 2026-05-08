@@ -252,17 +252,18 @@ class Annotations extends MCP {
 
 /// The sender or recipient role in an MCP conversation.
 enum Role {
-  user,
-  assistant;
+  user('user'),
+  assistant('assistant');
+
+  final String value;
 
   @override
   String toString() {
-    return name;
+    return value;
   }
 
-  factory Role.to(String str) {
-    return Role.values.firstWhere((e) => e.name == str);
-  }
+  const Role(this.value);
+  factory Role.to(String str) => Role.values.firstWhere((e) => e.value == str);
 }
 
 /// A successful result that carries no data.
@@ -555,6 +556,11 @@ interface class ResourceContents extends MCP {
   }
 
   factory ResourceContents.toMCP(Map<String, Object?> map) {
+    if (map['text'] != null) {
+      return TextResourceContents.toMCP(map);
+    } else if (map['blob'] != null) {
+      return BlobResourceContents.toMCP(map);
+    }
     return ResourceContents(
       uri: map['uri'] as String,
       mimeType: map['mimeType'] as String?,
@@ -2986,37 +2992,25 @@ interface GetPromptResult {
   [key: string]: unknown;
 }*/
 class GetPromptResult extends MapMC<String, Object?> {
-  MetaObject? get $meta => data['_meta'] != null
-      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
-      : null;
-  ResultType get resultType =>
-      ResultType.values.firstWhere((e) => e.value == data['resultType']);
-  String? get description => data['description'] as String?;
-  List<PromptMessage> get messages => (data['messages'] as List<dynamic>)
-      .map((e) => PromptMessage.toMCP(e as Map<String, Object?>))
-      .toList();
-
-  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(ResultType value) => data['resultType'] = value.value;
-  set description(String? value) => data['description'] = value;
-  set messages(List<PromptMessage> value) =>
-      data['messages'] = value.map((e) => e.toMap()).toList();
+  MetaObject? $meta;
+  String? description;
+  List<PromptMessage> messages;
 
   GetPromptResult({
-    MetaObject? $meta,
-    String? description,
-    required List<PromptMessage> messages,
+    this.$meta,
+    this.description,
+    required this.messages,
     Map<String, Object?>? additionalData,
-  }) : super({
-          if ($meta != null) '_meta': $meta.toMap(),
-          'description': description,
-          'messages': messages.map((e) => e.toMap()).toList(),
-          ...?additionalData,
-        });
+  }) : super(additionalData ?? {});
 
   @override
   Map<String, Object?> toMap() {
-    return data;
+    return {
+      ...super.data,
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (description != null) 'description': description,
+      'messages': messages.map((e) => e.toMap()).toList(),
+    };
   }
 
   factory GetPromptResult.toMCP(Map<String, Object?> map) {
@@ -3024,9 +3018,9 @@ class GetPromptResult extends MapMC<String, Object?> {
       $meta: map['_meta'] != null
           ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      description: map['description'] as String?,
-      messages: (map['messages'] as List<dynamic>)
-          .map((e) => PromptMessage.toMCP(e as Map<String, Object?>))
+      description: map['description']?.toString(),
+      messages: (map['messages'] as List<Map<String, Object?>>)
+          .map((e) => PromptMessage.toMCP(e))
           .toList(),
       additionalData: Map.from(map)
         ..removeWhere(
@@ -3057,9 +3051,7 @@ class PromptMessage extends MCP {
 
   factory PromptMessage.toMCP(Map<String, Object?> map) {
     return PromptMessage(
-      role: Role.values.firstWhere(
-        (e) => e.toString() == 'Role.${map['role']}',
-      ),
+      role: Role.to(map['role'] as String),
       content: ContentBlock.toMCP(map['content'] as Map<String, Object?>),
     );
   }
