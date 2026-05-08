@@ -1,3 +1,7 @@
+## 1.0.2
+- Fixed some incorrect field types in the Dart models (e.g. `error` field in `JSONRPCErrorResponse`).
+- Updated example code and tests to reflect these corrections.
+- Added missing Dart doc comments on some public classes and fields.
 
 ## 1.0.1
 - Fixed Pubspec metadata

@@ -1,4 +1,4 @@
-# mcp_models
+# MCP Models
 
 [![pub package](https://img.shields.io/pub/v/mcp_models.svg)](https://pub.dev/packages/mcp_models)
 [![Dev](https://img.shields.io/pub/v/mcp_models.svg?label=dev&include_prereleases)](https://pub.dev/packages/mcp_models)
