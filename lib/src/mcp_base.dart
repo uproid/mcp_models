@@ -2403,12 +2403,6 @@ class CreateTaskResultResponse extends MCP {
   }
 }
 
-/*interface CreateTaskResult {
-  _meta?: MetaObject;
-  task: Task;
-  [key: string]: unknown;
-}*/
-
 class CreateTaskResult extends MapMC<String, Object?> {
   Task get task => Task.toMCP(data['task'] as Map<String, Object?>);
 
@@ -2496,14 +2490,6 @@ class GetTaskRequestParams extends MCP {
   }
 }
 
-/*
-interface GetTaskPayloadRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  method: “tasks/result”;
-  params: { taskId: string };
-}
-*/
 class GetTaskPayloadRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2530,13 +2516,6 @@ class GetTaskPayloadRequest extends MCP {
   }
 }
 
-/*
-interface GetTaskPayloadResultResponse {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  result: GetTaskPayloadResult;
-}
-*/
 class GetTaskPayloadResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2556,11 +2535,6 @@ class GetTaskPayloadResultResponse extends MCP {
     );
   }
 }
-
-/*interface GetTaskPayloadResult {
-  _meta?: MetaObject;
-  [key: string]: unknown;
-}*/
 
 class GetTaskPayloadResult extends MapMC<String, Object?> {
   MetaObject? get $meta => data['_meta'] != null
@@ -2588,14 +2562,6 @@ class GetTaskPayloadResult extends MapMC<String, Object?> {
   }
 }
 
-/*
-interface ListTasksRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  params?: PaginatedRequestParams;
-  method: “tasks/list”;
-}
-*/
 class ListTasksRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2683,14 +2649,6 @@ class ListTasksResult extends MapMC<String, Object?> {
   }
 }
 
-/*
-interface CancelTaskRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  method: “tasks/cancel”;
-  params: { taskId: string };
-}
-*/
 class CancelTaskRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2717,13 +2675,6 @@ class CancelTaskRequest extends MCP {
   }
 }
 
-/*
-interface CancelTaskResultResponse {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  result: CancelTaskResult;
-}
-*/
 class CancelTaskResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2754,14 +2705,6 @@ abstract class CancelTaskResult implements MCP {
   }
 }
 
-/*
-interface GetPromptRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  method: “prompts/get”;
-  params: GetPromptRequestParams;
-}
-*/
 class GetPromptRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2790,15 +2733,6 @@ class GetPromptRequest extends MCP {
   }
 }
 
-/*
-interface GetPromptRequestParams {
-  _meta?: RequestMetaObject;
-  inputResponses?: InputResponses;
-  requestState?: string;
-  name: string;
-  arguments?: { [key: string]: string };
-}
-*/
 class GetPromptRequestParams extends MCP {
   RequestMetaObject? $meta;
   InputResponses? inputResponses;
@@ -2900,12 +2834,6 @@ class GetPromptResult extends MapMC<String, Object?> {
   }
 }
 
-/*
-interface PromptMessage {
-  role: Role;
-  content: ContentBlock;
-}
-*/
 class PromptMessage extends MCP {
   Role role;
   ContentBlock content;
@@ -2923,14 +2851,6 @@ class PromptMessage extends MCP {
   }
 }
 
-/*
-interface ListPromptsRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  params?: PaginatedRequestParams;
-  method: “prompts/list”;
-}
-*/
 class ListPromptsRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -2959,13 +2879,6 @@ class ListPromptsRequest extends MCP {
   }
 }
 
-/*
-interface ListPromptsResultResponse {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  result: ListPromptsResult;
-}
-*/
 class ListPromptsResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -3033,14 +2946,6 @@ class ListPromptsResult extends MapMC<String, Object?> {
   }
 }
 
-/*interface Prompt {
-  icons?: Icon[];
-  name: string;
-  title?: string;
-  description?: string;
-  arguments?: PromptArgument[];
-  _meta?: MetaObject;
-}*/
 /// A prompt or prompt template offered by the server.
 class Prompt extends MCP {
   /// Optional display icons.
@@ -3101,13 +3006,6 @@ class Prompt extends MCP {
   }
 }
 
-/*
-interface PromptArgument {
-  name: string;
-  title?: string;
-  description?: string;
-  required?: boolean;
-}*/
 /// Describes an argument accepted by a [Prompt].
 class PromptArgument extends MCP {
   /// Programmatic argument name.
@@ -3149,14 +3047,6 @@ class PromptArgument extends MCP {
   }
 }
 
-/*
-interface ListResourcesRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  params?: PaginatedRequestParams;
-  method: “resources/list”;
-}
-*/
 class ListResourcesRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -3185,13 +3075,6 @@ class ListResourcesRequest extends MCP {
   }
 }
 
-/*
-interface ListResourcesResultResponse {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  result: ListResourcesResult;
-}
-*/
 class ListResourcesResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -3261,18 +3144,6 @@ class ListResourcesResult extends MapMC<String, Object?> {
   }
 }
 
-/*
-interface Resource {
-  icons?: Icon[];
-  name: string;
-  title?: string;
-  uri: string;
-  description?: string;
-  mimeType?: string;
-  annotations?: Annotations;
-  size?: number;
-  _meta?: MetaObject;
-}*/
 /// A known resource that the server can serve.
 class Resource extends MCP {
   /// Optional display icons.
@@ -3350,13 +3221,6 @@ class Resource extends MCP {
   }
 }
 
-/*
-interface ReadResourceRequest {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  method: “resources/read”;
-  params: ReadResourceRequestParams;
-}*/
 class ReadResourceRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
@@ -3385,13 +3249,6 @@ class ReadResourceRequest extends MCP {
   }
 }
 
-/*
-interface ReadResourceRequestParams {
-  _meta?: RequestMetaObject;
-  inputResponses?: InputResponses;
-  requestState?: string;
-  uri: string;
-}*/
 class ReadResourceRequestParams extends MCP {
   RequestMetaObject? $meta;
   InputResponses? inputResponses;
@@ -3427,12 +3284,6 @@ class ReadResourceRequestParams extends MCP {
   }
 }
 
-/*
-interface ReadResourceResultResponse {
-  jsonrpc: “2.0”;
-  id: RequestId;
-  result: InputRequiredResult | ReadResourceResult;
-}*/
 class ReadResourceResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
