@@ -311,10 +311,17 @@ class Icon extends MCP {
 
 /// UI theme variants for [Icon].
 enum Theme {
-  dark,
-  light;
+  dark('dark'),
+  light('light');
 
-  factory Theme.to(String str) => Theme.values.firstWhere((e) => e.name == str);
+  final String value;
+
+  const Theme(this.value);
+
+  factory Theme.to(String str) =>
+      Theme.values.firstWhere((e) => e.value == str);
+  @override
+  String toString() => value;
 }
 
 /// Syslog-compatible log severity levels (RFC-5424).
@@ -1466,6 +1473,9 @@ enum StringFormat {
 
   static StringFormat to(String str) =>
       StringFormat.values.firstWhere((e) => e.value == str);
+
+  @override
+  String toString() => value;
 }
 
 class StringSchema extends PrimitiveSchemaDefinition<String> {
@@ -1963,6 +1973,8 @@ enum TaskStatus {
 
   final String value;
   const TaskStatus(this.value);
+  @override
+  String toString() => value;
 }
 
 /// Data associated with an MCP task.
@@ -2691,34 +2703,25 @@ interface ListTasksResult {
   [key: string]: unknown;
 }*/
 class ListTasksResult extends MapMC<String, Object?> {
-  MetaObject? get $meta => data['_meta'] != null
-      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
-      : null;
-  String? get nextCursor => data['nextCursor'] as String?;
-  List<Task> get tasks => (data['tasks'] as List<dynamic>)
-      .map((e) => Task.toMCP(e as Map<String, Object?>))
-      .toList();
-
-  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
-  set nextCursor(String? value) => data['nextCursor'] = value;
-  set tasks(List<Task> value) =>
-      data['tasks'] = value.map((e) => e.toMap()).toList();
+  MetaObject? $meta;
+  String? nextCursor;
+  List<Task> tasks;
 
   ListTasksResult({
-    MetaObject? $meta,
-    String? nextCursor,
-    required List<Task> tasks,
+    this.$meta,
+    this.nextCursor,
+    required this.tasks,
     Map<String, Object?>? additionalData,
-  }) : super({
-          if ($meta != null) '_meta': $meta.toMap(),
-          if (nextCursor != null) 'nextCursor': nextCursor,
-          'tasks': tasks.map((e) => e.toMap()).toList(),
-          ...?additionalData,
-        });
+  }) : super(additionalData ?? {});
 
   @override
   Map<String, Object?> toMap() {
-    return data;
+    return {
+      ...super.data,
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (nextCursor != null) 'nextCursor': nextCursor,
+      'tasks': tasks.map((e) => e.toMap()).toList(),
+    };
   }
 
   factory ListTasksResult.toMCP(Map<String, Object?> map) {
