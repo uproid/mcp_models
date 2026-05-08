@@ -477,6 +477,17 @@ class ContentBlock extends MCP {
   }
 
   factory ContentBlock.toMCP(Map<String, Object?> map) {
+    if (map['type'] == 'text') {
+      return TextContent.toMCP(map);
+    } else if (map['type'] == 'image') {
+      return ImageContent.toMCP(map);
+    } else if (map['type'] == 'audio') {
+      return AudioContent.toMCP(map);
+    } else if (map['type'] == 'resource') {
+      return EmbeddedResource.toMCP(map);
+    } else if (map['type'] == 'resource_link') {
+      return ResourceLink.toMCP(map);
+    }
     return ContentBlock(
       type: map['type'] as String,
       data: map['data'] as String,
@@ -501,6 +512,24 @@ class AudioContent extends ContentBlock {
     super.annotations,
     super.$meta,
   }) : super(type: 'audio');
+
+  @override
+  Map<String, Object?> toMap() {
+    return {...super.toMap()};
+  }
+
+  factory AudioContent.toMCP(Map<String, Object?> map) {
+    return AudioContent(
+      data: map['data'] as String,
+      mimeType: map['mimeType'] as String,
+      annotations: map['annotations'] != null
+          ? Annotations.toMCP(map['annotations'] as Map<String, Object?>)
+          : null,
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+    );
+  }
 }
 
 /// Base interface for resource content (text or blob).
@@ -640,6 +669,24 @@ class ImageContent extends ContentBlock {
     super.annotations,
     super.$meta,
   }) : super(type: 'image');
+
+  @override
+  Map<String, Object?> toMap() {
+    return {...super.toMap()};
+  }
+
+  factory ImageContent.toMCP(Map<String, Object?> map) {
+    return ImageContent(
+      data: map['data'] as String,
+      mimeType: map['mimeType'] as String,
+      annotations: map['annotations'] != null
+          ? Annotations.toMCP(map['annotations'] as Map<String, Object?>)
+          : null,
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+    );
+  }
 }
 
 /// A resource link returned by a tool or included in a prompt.
