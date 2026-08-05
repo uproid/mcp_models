@@ -1,7 +1,7 @@
 /// A thin [Map] wrapper that delegates all operations to an inner [data] map.
 ///
 /// Used as a base for MCP types whose serialised form _is_ the map itself
-/// (e.g. [ClientCapabilities], [InitializeResult]).
+/// (e.g. [ClientCapabilities], [ListToolsResult]).
 class MapModel<A, B> implements Map<A, B> {
   /// The underlying map data.
   final Map<A, B> data;

@@ -30,6 +30,10 @@ enum Theme {
 }
 
 /// Syslog-compatible log severity levels (RFC-5424).
+@Deprecated(
+  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
+  'Remains in the specification for at least twelve months.',
+)
 enum LoggingLevel {
   debug('debug'),
   info('info'),
@@ -84,20 +88,18 @@ enum StringFormat {
   String toString() => value;
 }
 
-/// The status of an MCP task.
-enum TaskStatus {
-  working('working'),
-  completed('completed'),
-  failed('failed'),
-  cancelled('cancelled'),
-  inputRequired('input_required');
+/// Cache scope for a cacheable result (see [DiscoverResult] and the various
+/// `List*Result` / `ReadResourceResult` types).
+enum CacheScope {
+  public('public'),
+  private('private');
 
   final String value;
-  const TaskStatus(this.value);
+  const CacheScope(this.value);
   @override
   String toString() => value;
-  static TaskStatus to(String str) =>
-      TaskStatus.values.firstWhere((e) => e.value == str);
+  factory CacheScope.to(String str) =>
+      CacheScope.values.firstWhere((e) => e.value == str);
 }
 
 enum ResultType {

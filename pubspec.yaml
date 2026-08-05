@@ -1,6 +1,6 @@
 name: mcp_models
-description: Dart model classes for the Model Context Protocol (MCP) — tools, resources, prompts, sampling, tasks and notifications. No codegen.
-version: 1.0.2
+description: Dart model classes for the Model Context Protocol (MCP) — tools, resources, prompts, subscriptions and notifications. No codegen.
+version: 2.0.0
 repository: https://github.com/uproid/mcp_models
 homepage: https://github.com/uproid/mcp_models
 issue_tracker: https://github.com/uproid/mcp_models/issues
@@ -11,5 +11,5 @@ environment:
 dependencies: {}
 
 dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.25.6
+  lints: ^6.1.0
+  test: ^1.31.2

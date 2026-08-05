@@ -7,7 +7,7 @@
 [![issues-open](https://img.shields.io/github/issues-raw/uproid/mcp_models)](https://github.com/uproid/mcp_models/issues) 
 [![Contributions](https://img.shields.io/github/contributors/uproid/mcp_models)](https://github.com/uproid/mcp_models/blob/master/CONTRIBUTING.md)
 
-Dart model classes for the [Model Context Protocol (MCP) 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/schema).
+Dart model classes for the [Model Context Protocol (MCP) 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/schema).
 
 Every type defined in the official MCP schema is available as a plain Dart class
 with `toMap()` serialisation and a named factory `TypeName.toMCP(Map)` for
@@ -17,8 +17,9 @@ deserialisation — no code generation required.
 
 ## Features
 
-- Full coverage of the MCP 2025-11-25 schema: JSON-RPC messages, tools,
-  resources, prompts, sampling, elicitation, tasks, notifications and more.
+- Full coverage of the MCP 2026-07-28 schema: JSON-RPC messages, tools,
+  resources, prompts, elicitation, subscriptions, server discovery,
+  notifications and more.
 - Zero runtime dependencies — pure Dart.
 - `McpBuilder` helper for declarative server capability registration.
 - `MapMC<K,V>` and `MapModel<K,V>` base classes for types whose serialised form
@@ -46,13 +47,17 @@ dart pub add mcp_models
 ```dart
 import 'package:mcp_models/mcp_models.dart';
 
-// Build an initialize request.
-final request = InitializeRequest(
+// Every request now carries its own protocol version and capabilities —
+// there is no more one-time `initialize` handshake. Servers advertise their
+// capabilities out-of-band via `server/discover` instead.
+final request = DiscoverRequest(
   id: '1',
-  params: InitializeRequestParams(
-    protocolVersion: '2025-11-25',
-    capabilities: ClientCapabilities({}),
-    clientInfo: Implementation(name: 'my_client', version: '1.0.0'),
+  params: RequestParams(
+    $meta: RequestMetaObject(
+      protocolVersion: '2026-07-28',
+      clientCapabilities: ClientCapabilities({}),
+      clientInfo: Implementation(name: 'my_client', version: '1.0.0'),
+    ),
   ),
 );
 
@@ -60,7 +65,7 @@ final request = InitializeRequest(
 final json = request.toMap();
 
 // Deserialise back.
-final restored = InitializeRequest.toMCP(json);
+final restored = DiscoverRequest.toMCP(json);
 ```
 
 ---
@@ -95,7 +100,11 @@ builder.tool(
 builder.resource(
   name: 'config',
   uri: 'file:///config.json',
-  handler: (req) async => ReadResourceResult(contents: []),
+  handler: (req) async => ReadResourceResult(
+    contents: [],
+    ttlMs: 0,
+    cacheScope: CacheScope.private,
+  ),
 );
 
 builder.prompt(
@@ -120,17 +129,19 @@ if (handler != null) {
 | Category | Types |
 |---|---|
 | JSON-RPC core | `JSONRPCRequest`, `JSONRPCNotification`, `JSONRPCResultResponse`, `JSONRPCErrorResponse` |
-| Errors | `Error`, `ParseError`, `InvalidRequestError`, `MethodNotFoundError`, `InvalidParamsError`, `InternalError` |
-| Initialization | `InitializeRequest`, `InitializeRequestParams`, `InitializeResult`, `Implementation`, `ClientCapabilities`, `ServerCapabilities` |
-| Tools | `Tool`, `ToolSchema`, `ToolAnnotations`, `ToolExecution`, `CallToolRequest`, `CallToolResult`, `ListToolsResult` |
+| Errors | `Error`, `ParseError`, `InvalidRequestError`, `MethodNotFoundError`, `InvalidParamsError`, `InternalError`, `HeaderMismatchError`, `MissingRequiredClientCapabilityError`, `UnsupportedProtocolVersionError` |
+| Meta / capabilities | `RequestMetaObject`, `NotificationMetaObject`, `ResultMetaObject`, `Implementation`, `ClientCapabilities`, `ServerCapabilities` |
+| Server discovery | `DiscoverRequest`, `DiscoverResultResponse`, `DiscoverResult` |
+| Subscriptions | `SubscriptionFilter`, `SubscriptionsListenRequest`, `SubscriptionsListenResult`, `SubscriptionsAcknowledgedNotification` |
+| Multi round-trip | `InputRequiredResult`, `InputResponseRequestParams`, `CallToolResultOutcome`, `GetPromptResultOutcome`, `ReadResourceResultOutcome` |
+| Tools | `Tool`, `ToolSchema`, `ToolAnnotations`, `CallToolRequest`, `CallToolResult`, `ListToolsResult` |
 | Resources | `Resource`, `ResourceTemplate`, `TextResourceContents`, `BlobResourceContents`, `ReadResourceResult`, `ListResourcesResult` |
 | Prompts | `Prompt`, `PromptArgument`, `PromptMessage`, `GetPromptResult`, `ListPromptsResult` |
-| Sampling | `CreateMessageRequest`, `CreateMessageResult`, `SamplingMessage`, `ModelPreferences`, `ModelHint`, `ToolChoice` |
-| Elicitation | `ElicitRequest`, `ElicitResult`, `StringSchema`, `NumberSchema`, `BooleanSchema`, `UntitledSingleSelectEnumSchema`, `TitledSingleSelectEnumSchema` |
-| Tasks | `Task`, `TaskStatus`, `TaskMetadata`, `ListTasksResult` |
+| Sampling (deprecated) | `CreateMessageRequest`, `CreateMessageResult`, `SamplingMessage`, `ModelPreferences`, `ModelHint`, `ToolChoice` |
+| Elicitation | `ElicitRequest`, `ElicitRequestFormParams`, `ElicitRequestURLParams`, `ElicitResult`, `StringSchema`, `NumberSchema`, `BooleanSchema`, `UntitledSingleSelectEnumSchema`, `TitledSingleSelectEnumSchema` |
 | Content blocks | `TextContent`, `ImageContent`, `AudioContent`, `EmbeddedResource`, `ResourceLink` |
-| Notifications | `InitializedNotification`, `CancelledNotification`, `ProgressNotification`, `LoggingMessageNotificationParams`, `ToolListChangedNotification`, `ResourceListChangedNotification` |
-| Misc | `PingRequest`, `EmptyResult`, `Annotations`, `Role`, `LoggingLevel`, `MetaObject`, `Icon`, `Theme` |
+| Notifications | `CancelledNotification`, `ProgressNotification`, `ResourceUpdatedNotification`, `ToolListChangedNotification`, `ResourceListChangedNotification` |
+| Misc | `EmptyResult`, `Annotations`, `Role`, `CacheScope`, `LoggingLevel` (deprecated), `MetaObject`, `Icon`, `Theme` |
 
 See the [example](example/mcp_models_example.dart) for end-to-end usage.
 
@@ -138,8 +149,8 @@ See the [example](example/mcp_models_example.dart) for end-to-end usage.
 
 ## MCP specification
 
-This package targets the **MCP 2025-11-25** schema:
-<https://modelcontextprotocol.io/specification/2025-11-25/schema>
+This package targets the **MCP 2026-07-28** schema:
+<https://modelcontextprotocol.io/specification/2026-07-28/schema>
 
 ---
 

@@ -2,51 +2,60 @@
 import 'package:mcp_models/mcp_models.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// This example demonstrates the key workflows exposed by mcp_models:
+// This example demonstrates the key workflows exposed by mcp_models under the
+// MCP 2026-07-28 schema:
 //
-//  1. Build an initialize handshake (client → server).
+//  1. Build a `server/discover` request/response (out-of-band capability
+//     advertisement — there is no more `initialize` handshake; every request
+//     carries its own protocol version and capabilities instead).
 //  2. Register tools, resources and prompts with McpBuilder.
 //  3. Serialise a tool-call request and deserialise the response.
-//  4. Construct a sampling (createMessage) request.
+//  4. Open a `subscriptions/listen` stream for change notifications.
 //  5. Produce error responses.
+//  6. Emit a progress notification.
 // ─────────────────────────────────────────────────────────────────────────────
 
 void main() {
-  _initializeHandshake();
+  _discover();
   _toolsWithMcpBuilder();
   _callToolRoundTrip();
-  _samplingRequest();
+  _subscriptionsListen();
   _errorResponse();
   _progressNotification();
 }
 
-// ── 1. Initialize handshake ───────────────────────────────────────────────────
+// ── 1. server/discover ────────────────────────────────────────────────────────
 
-void _initializeHandshake() {
-  print('\n── Initialize handshake ──────────────────────────────────────────');
+/// Builds the request metadata every MCP request now carries: protocol
+/// version and capabilities are declared per-request rather than negotiated
+/// once via an `initialize` handshake.
+RequestMetaObject _requestMeta() => RequestMetaObject(
+      protocolVersion: '2026-07-28',
+      clientCapabilities: ClientCapabilities({'elicitation': {}}),
+      clientInfo: Implementation(name: 'example_client', version: '1.0.0'),
+    );
 
-  // Client sends an initialize request.
-  final request = InitializeRequest(
+void _discover() {
+  print('\n── server/discover ────────────────────────────────────────────────');
+
+  // Client asks the server what it supports.
+  final request = DiscoverRequest(
     id: '1',
-    params: InitializeRequestParams(
-      protocolVersion: '2025-11-25',
-      capabilities: ClientCapabilities({}),
-      clientInfo: Implementation(
-        name: 'example_client',
-        version: '1.0.0',
-        description: 'A minimal MCP client example',
-      ),
-    ),
+    params: RequestParams($meta: _requestMeta()),
   );
 
   print('→ ${request.toMap()}');
 
-  // Server responds with its capabilities.
-  final result = InitializeResult(
-    protocolVersion: '2025-11-25',
-    capabilities: ServerCapabilities({}),
-    serverInfo: Implementation(name: 'example_server', version: '1.0.0'),
+  // Server responds with its supported versions and capabilities.
+  final result = DiscoverResult(
+    supportedVersions: ['2026-07-28', '2025-11-25'],
+    capabilities: ServerCapabilities({
+      'tools': {'listChanged': true},
+      'resources': {'listChanged': true, 'subscribe': true},
+    }),
     instructions: 'Call tools/list to discover available tools.',
+    ttlMs: 3600000,
+    cacheScope: CacheScope.public,
   );
 
   print('← ${result.toMap()}');
@@ -94,6 +103,9 @@ void _toolsWithMcpBuilder() {
           mimeType: 'application/json',
         ),
       ],
+      // A config file rarely changes — cache it for a minute.
+      ttlMs: 60000,
+      cacheScope: CacheScope.private,
     ),
   );
 
@@ -148,6 +160,7 @@ void _callToolRoundTrip() {
   final callRequest = CallToolRequest(
     id: '2',
     params: CallToolRequestParams(
+      $meta: _requestMeta(),
       name: 'add',
       arguments: {'a': 3, 'b': 7},
     ),
@@ -161,7 +174,8 @@ void _callToolRoundTrip() {
   print('  Tool name : ${parsed.params.name}');
   print('  Arguments : ${parsed.params.arguments}');
 
-  // Server returns a result.
+  // Server returns a result. `result` is a discriminated union of
+  // InputRequiredResult | CallToolResult — here the call completed normally.
   final callResult = CallToolResultResponse(
     id: '2',
     result: CallToolResult(
@@ -172,49 +186,58 @@ void _callToolRoundTrip() {
   final resultMap = callResult.toMap();
   print('← $resultMap');
 
-  // Client deserialises the response.
+  // Client deserialises the response and dispatches on resultType.
   final parsedResult = CallToolResultResponse.toMCP(resultMap);
-  final text = (parsedResult.result.content.first as TextContent).text;
-  print('  Result text: $text');
+  final outcome = parsedResult.result;
+  if (outcome is CallToolResult) {
+    final text = (outcome.content.first as TextContent).text;
+    print('  Result text: $text');
+  } else if (outcome is InputRequiredResult) {
+    print('  Server needs more input: ${outcome.requestState}');
+  }
 }
 
-// ── 4. Sampling (createMessage) request ──────────────────────────────────────
+// ── 4. subscriptions/listen ───────────────────────────────────────────────────
 
-void _samplingRequest() {
-  print('\n── Sampling request ──────────────────────────────────────────────');
+void _subscriptionsListen() {
+  print('\n── subscriptions/listen ──────────────────────────────────────────');
 
-  final createMsg = CreateMessageRequest(
-    params: CreateMessageRequestParams(
-      messages: [
-        SamplingMessage(
-          role: Role.user,
-          content: [
-            TextContent(
-              text: 'What is the capital of France?',
-              mimeType: 'text/plain',
-            )
-          ],
-        ),
-      ],
-      maxTokens: 256,
-      temperature: 0.7,
-      systemPrompt: 'You are a helpful geography assistant.',
+  // Client opens a long-lived stream for change notifications, replacing the
+  // former resources/subscribe + resources/unsubscribe RPC pair.
+  final listenRequest = SubscriptionsListenRequest(
+    id: '3',
+    params: SubscriptionsListenRequestParams(
+      $meta: _requestMeta(),
+      notifications: SubscriptionFilter(
+        toolsListChanged: true,
+        resourcesListChanged: true,
+        resourceSubscriptions: ['file:///config.json'],
+      ),
     ),
   );
 
-  print('→ ${createMsg.toMap()}');
+  print('→ ${listenRequest.toMap()}');
 
-  // The client returns a result after querying its LLM.
-  final msgResult = CreateMessageResult(
-    model: 'gpt-4o',
-    role: Role.assistant,
-    content: [
-      TextContent(text: 'Paris.', mimeType: 'text/plain'),
-    ],
-    stopReason: 'end_turn',
+  // Server immediately acknowledges the stream.
+  final ack = SubscriptionsAcknowledgedNotification(
+    params: SubscriptionsAcknowledgedNotificationParams(
+      notifications: SubscriptionFilter(
+        toolsListChanged: true,
+        resourcesListChanged: true,
+        resourceSubscriptions: ['file:///config.json'],
+      ),
+    ),
   );
+  print('← ${ack.toMap()}');
 
-  print('← ${msgResult.toMap()}');
+  // ... time passes, config.json changes on disk ...
+  final updated = ResourceUpdatedNotification(
+    params: ResourceUpdatedNotificationParams(
+      $meta: NotificationMetaObject(subscriptionId: '3'),
+      uri: 'file:///config.json',
+    ),
+  );
+  print('← ${updated.toMap()}');
 }
 
 // ── 5. Error response ─────────────────────────────────────────────────────────

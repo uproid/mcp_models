@@ -1,3 +1,4 @@
+import 'package:mcp_models/src/enums.dart';
 import 'package:mcp_models/src/mcp_base.dart';
 
 // ── Handler type aliases ───────────────────────────────────────────────────────
@@ -52,7 +53,11 @@ class _PromptEntry {
 ///   mcp.resource(
 ///     name: 'readme',
 ///     uri: rq.url(''),
-///     handler: (req) async => ReadResourceResult(contents: [...]),
+///     handler: (req) async => ReadResourceResult(
+///       contents: [...],
+///       ttlMs: 0,
+///       cacheScope: CacheScope.private,
+///     ),
 ///   );
 /// }
 /// ```
@@ -168,18 +173,55 @@ class McpBuilder {
 
   // ── Build list results ───────────────────────────────────────────────────────
 
-  ListToolsResult buildToolsResult() =>
-      ListToolsResult(tools: _tools.values.map((e) => e.tool).toList());
-
-  ListResourcesResult buildResourcesResult() => ListResourcesResult(
-        resources: _resources.values.map((e) => e.resource).toList(),
+  /// Builds a `tools/list` result.
+  ///
+  /// [ttlMs] and [cacheScope] describe how long the client may cache this
+  /// list; they default to `0` (do not cache) / [CacheScope.private].
+  ListToolsResult buildToolsResult({
+    num ttlMs = 0,
+    CacheScope cacheScope = CacheScope.private,
+  }) =>
+      ListToolsResult(
+        tools: _tools.values.map((e) => e.tool).toList(),
+        ttlMs: ttlMs,
+        cacheScope: cacheScope,
       );
 
-  ListPromptsResult buildPromptsResult() =>
-      ListPromptsResult(prompts: _prompts.values.map((e) => e.prompt).toList());
+  /// Builds a `resources/list` result. See [buildToolsResult] for caching
+  /// params.
+  ListResourcesResult buildResourcesResult({
+    num ttlMs = 0,
+    CacheScope cacheScope = CacheScope.private,
+  }) =>
+      ListResourcesResult(
+        resources: _resources.values.map((e) => e.resource).toList(),
+        ttlMs: ttlMs,
+        cacheScope: cacheScope,
+      );
 
-  ListResourceTemplatesResult buildResourceTemplatesResult() =>
-      ListResourceTemplatesResult(resourceTemplates: _resourceTemplates);
+  /// Builds a `prompts/list` result. See [buildToolsResult] for caching
+  /// params.
+  ListPromptsResult buildPromptsResult({
+    num ttlMs = 0,
+    CacheScope cacheScope = CacheScope.private,
+  }) =>
+      ListPromptsResult(
+        prompts: _prompts.values.map((e) => e.prompt).toList(),
+        ttlMs: ttlMs,
+        cacheScope: cacheScope,
+      );
+
+  /// Builds a `resources/templates/list` result. See [buildToolsResult] for
+  /// caching params.
+  ListResourceTemplatesResult buildResourceTemplatesResult({
+    num ttlMs = 0,
+    CacheScope cacheScope = CacheScope.private,
+  }) =>
+      ListResourceTemplatesResult(
+        resourceTemplates: _resourceTemplates,
+        ttlMs: ttlMs,
+        cacheScope: cacheScope,
+      );
 
   // ── Handler lookups ──────────────────────────────────────────────────────────
 
