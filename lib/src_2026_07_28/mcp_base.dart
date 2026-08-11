@@ -1,5 +1,5 @@
-import 'package:mcp_models/mcp_models.dart';
-import 'package:mcp_models/src/map_model.dart';
+import 'package:mcp_models/mcp_models_2026_07_28.dart';
+import 'package:mcp_models/src_2026_07_28/map_model.dart';
 
 /// Base interface for all MCP model objects.
 ///
@@ -563,10 +563,9 @@ class RequestMetaObject extends MapMC<String, Object?> {
     'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
     'Remains in the specification for at least twelve months.',
   )
-  LoggingLevel? get logLevel =>
-      data['io.modelcontextprotocol/logLevel'] != null
-          ? LoggingLevel.to(data['io.modelcontextprotocol/logLevel'] as String)
-          : null;
+  LoggingLevel? get logLevel => data['io.modelcontextprotocol/logLevel'] != null
+      ? LoggingLevel.to(data['io.modelcontextprotocol/logLevel'] as String)
+      : null;
 
   @Deprecated(
     'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
@@ -583,16 +582,14 @@ class RequestMetaObject extends MapMC<String, Object?> {
   factory RequestMetaObject.toMCP(Map<String, Object?> map) {
     return RequestMetaObject(
       progressToken: map['progressToken']?.toString(),
-      protocolVersion:
-          map['io.modelcontextprotocol/protocolVersion'] as String,
+      protocolVersion: map['io.modelcontextprotocol/protocolVersion'] as String,
       clientCapabilities: ClientCapabilities.toMCP(
         map['io.modelcontextprotocol/clientCapabilities']
             as Map<String, Object?>,
       ),
       clientInfo: map['io.modelcontextprotocol/clientInfo'] != null
           ? Implementation.toMCP(
-              map['io.modelcontextprotocol/clientInfo']
-                  as Map<String, Object?>,
+              map['io.modelcontextprotocol/clientInfo'] as Map<String, Object?>,
             )
           : null,
       // ignore: deprecated_member_use_from_same_package
@@ -3273,12 +3270,10 @@ class SubscriptionsListenResultMetaObject extends MapMC<String, Object?> {
     return SubscriptionsListenResultMetaObject(
       serverInfo: map['io.modelcontextprotocol/serverInfo'] != null
           ? Implementation.toMCP(
-              map['io.modelcontextprotocol/serverInfo']
-                  as Map<String, Object?>,
+              map['io.modelcontextprotocol/serverInfo'] as Map<String, Object?>,
             )
           : null,
-      subscriptionId:
-          map['io.modelcontextprotocol/subscriptionId'].toString(),
+      subscriptionId: map['io.modelcontextprotocol/subscriptionId'].toString(),
       additionalData: Map<String, Object?>.from(map)
         ..removeWhere(
           (key, _) =>

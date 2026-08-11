@@ -1,4 +1,4 @@
-import 'package:mcp_models/mcp_models.dart';
+import 'package:mcp_models/mcp_models_2026_07_28.dart';
 import 'package:test/test.dart';
 
 RequestMetaObject _meta({String? progressToken}) => RequestMetaObject(
@@ -166,7 +166,8 @@ void main() {
         logLevel: LoggingLevel.warning,
       );
       // ignore: deprecated_member_use_from_same_package
-      expect(RequestMetaObject.toMCP(meta.toMap()).logLevel, LoggingLevel.warning);
+      expect(
+          RequestMetaObject.toMCP(meta.toMap()).logLevel, LoggingLevel.warning);
     });
   });
 
@@ -403,7 +404,9 @@ void main() {
 
   group('ClientCapabilities', () {
     test('is a raw passthrough map', () {
-      final caps = ClientCapabilities({'elicitation': {'form': {}}});
+      final caps = ClientCapabilities({
+        'elicitation': {'form': {}}
+      });
       final restored = ClientCapabilities.toMCP(caps.toMap());
       expect(restored['elicitation'], isNotNull);
     });
@@ -411,7 +414,9 @@ void main() {
 
   group('ServerCapabilities', () {
     test('is a raw passthrough map', () {
-      final caps = ServerCapabilities({'tools': {'listChanged': true}});
+      final caps = ServerCapabilities({
+        'tools': {'listChanged': true}
+      });
       final restored = ServerCapabilities.toMCP(caps.toMap());
       expect((restored['tools'] as Map)['listChanged'], isTrue);
     });
@@ -452,8 +457,12 @@ void main() {
         },
         additionalData: {
           'oneOf': [
-            {'required': ['a']},
-            {'required': ['b']},
+            {
+              'required': ['a']
+            },
+            {
+              'required': ['b']
+            },
           ],
         },
       );
@@ -1017,7 +1026,8 @@ void main() {
 
   group('DiscoverRequest', () {
     test('toMap / toMCP round-trip', () {
-      final req = DiscoverRequest(id: '1', params: RequestParams($meta: _meta()));
+      final req =
+          DiscoverRequest(id: '1', params: RequestParams($meta: _meta()));
       expect(req.toMap()['method'], 'server/discover');
 
       final r = DiscoverRequest.toMCP(req.toMap());

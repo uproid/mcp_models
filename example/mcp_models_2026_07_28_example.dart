@@ -1,5 +1,5 @@
 // ignore_for_file: avoid_print
-import 'package:mcp_models/mcp_models.dart';
+import 'package:mcp_models/mcp_models_2026_07_28.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // This example demonstrates the key workflows exposed by mcp_models under the
@@ -36,7 +36,8 @@ RequestMetaObject _requestMeta() => RequestMetaObject(
     );
 
 void _discover() {
-  print('\n── server/discover ────────────────────────────────────────────────');
+  print(
+      '\n── server/discover ────────────────────────────────────────────────');
 
   // Client asks the server what it supports.
   final request = DiscoverRequest(

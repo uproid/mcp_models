@@ -1,5 +1,5 @@
-import 'package:mcp_models/src/enums.dart';
-import 'package:mcp_models/src/mcp_base.dart';
+import 'package:mcp_models/src_2026_07_28/enums.dart';
+import 'package:mcp_models/src_2026_07_28/mcp_base.dart';
 
 // ── Handler type aliases ───────────────────────────────────────────────────────
 
