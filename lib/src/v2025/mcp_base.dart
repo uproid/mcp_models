@@ -1,18 +1,12 @@
-import 'package:mcp_models/mcp_models_2026_07_28.dart';
-import 'package:mcp_models/src_2026_07_28/map_model.dart';
-
-/// Base interface for all MCP model objects.
-///
-/// Every concrete MCP type must implement [toMap] to produce a
-/// JSON-serialisable `Map<String, Object?>`.
-abstract interface class MCP {
-  Map<String, Object?> toMap();
-}
+import '../mcp.dart';
+import '../map_model.dart';
+import '../v2025/enums.dart';
+import '../v2025/types.dart';
 
 /// A [MapModel] that also satisfies [MCP].
 ///
 /// Use as the base class when the model _is_ the underlying map
-/// (e.g. [DiscoverResult], [ClientCapabilities]).
+/// (e.g. [InitializeResult], [ClientCapabilities]).
 abstract class MapMC<K, V> extends MapModel<K, V> implements MCP {
   MapMC(super.data);
 }
@@ -138,211 +132,27 @@ class JSONRPCResultResponse extends JSONRPCResponse {
 }
 
 /// Generic MCP result that may carry arbitrary extra fields.
-///
-/// Every result produced by a server implementing protocol version
-/// 2026-07-28 MUST include [resultType] on the wire; it defaults to
-/// `'complete'` for ergonomics. A client talking to an older server that
-/// omits the field MUST treat its absence as `'complete'`.
-class Result extends MCP {
+class Result extends MCP implements CancelTaskResult {
   /// Optional `_meta` object.
-  ResultMetaObject? $meta;
-
-  /// Indicates how the client should parse this result.
-  ///
-  /// `'complete'` means the result contains the final content. Other values
-  /// (e.g. `'input_required'`) signal that the payload is actually an
-  /// [InputRequiredResult].
-  String resultType;
+  MetaObject? meta;
 
   /// Any additional unknown fields returned by the server.
   Map<String, Object?>? unknown;
 
-  Result({this.$meta, this.resultType = 'complete', this.unknown});
+  Result({this.meta, this.unknown});
 
   @override
   Map<String, Object?> toMap() {
-    return {
-      if ($meta != null) '_meta': $meta!.toMap(),
-      'resultType': resultType,
-      ...?unknown,
-    };
+    return {'meta': meta?.toMap(), ...?unknown};
   }
 
   factory Result.toMCP(Map<String, Object?> map) {
     return Result(
-      $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+      meta: map['meta'] != null
+          ? MetaObject.toMCP(map['meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
-      unknown: Map<String, Object?>.from(map)
-        ..removeWhere((key, _) => key == '_meta' || key == 'resultType'),
+      unknown: map['unknown'] as Map<String, Object?>?,
     );
-  }
-}
-
-/// The `_meta` object carried inside a [Result].
-///
-/// May contain `"io.modelcontextprotocol/serverInfo"`, plus arbitrary
-/// server-defined passthrough keys.
-class ResultMetaObject extends MapMC<String, Object?> {
-  ResultMetaObject({
-    Implementation? serverInfo,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if (serverInfo != null)
-            'io.modelcontextprotocol/serverInfo': serverInfo.toMap(),
-          ...?additionalData,
-        });
-
-  /// Identifies the server software producing the response.
-  Implementation? get serverInfo =>
-      data['io.modelcontextprotocol/serverInfo'] != null
-          ? Implementation.toMCP(
-              data['io.modelcontextprotocol/serverInfo']
-                  as Map<String, Object?>,
-            )
-          : null;
-
-  set serverInfo(Implementation? value) =>
-      data['io.modelcontextprotocol/serverInfo'] = value?.toMap();
-
-  @override
-  Map<String, Object?> toMap() => data;
-
-  factory ResultMetaObject.toMCP(Map<String, Object?> map) {
-    return ResultMetaObject(additionalData: map);
-  }
-}
-
-/// The `_meta` object carried inside notification params.
-///
-/// May contain `"io.modelcontextprotocol/subscriptionId"`, plus arbitrary
-/// notification-defined passthrough keys.
-class NotificationMetaObject extends MapMC<String, Object?> {
-  NotificationMetaObject({
-    String? subscriptionId,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if (subscriptionId != null)
-            'io.modelcontextprotocol/subscriptionId': subscriptionId,
-          ...?additionalData,
-        });
-
-  /// Identifies the `subscriptions/listen` stream this notification was
-  /// delivered on. Absent for notifications not delivered via a
-  /// subscription stream (e.g. progress notifications).
-  String? get subscriptionId =>
-      data['io.modelcontextprotocol/subscriptionId']?.toString();
-
-  set subscriptionId(String? value) =>
-      data['io.modelcontextprotocol/subscriptionId'] = value;
-
-  @override
-  Map<String, Object?> toMap() => data;
-
-  factory NotificationMetaObject.toMCP(Map<String, Object?> map) {
-    return NotificationMetaObject(additionalData: map);
-  }
-}
-
-/// A result indicating the original request requires additional client
-/// input before the server can produce a final answer.
-///
-/// Sent as the `result` payload of a [CallToolResultResponse],
-/// [GetPromptResultResponse], or [ReadResourceResultResponse] when
-/// [resultType] is `"input_required"`. The client should collect
-/// [inputRequests] from the user (and/or echo back [requestState]) and
-/// retry the original request with `inputResponses`/`requestState` set.
-class InputRequiredResult extends MapMC<String, Object?>
-    implements
-        CallToolResultOutcome,
-        GetPromptResultOutcome,
-        ReadResourceResultOutcome {
-  /// Fixed discriminator — always `"input_required"`.
-  String get resultType => 'input_required';
-
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
-      : null;
-
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-
-  /// The input the client should collect from the user before retrying.
-  InputRequests? get inputRequests => data['inputRequests'];
-
-  set inputRequests(InputRequests? value) => data['inputRequests'] = value;
-
-  /// Opaque state token to echo back verbatim on retry.
-  String? get requestState => data['requestState'] as String?;
-
-  set requestState(String? value) => data['requestState'] = value;
-
-  InputRequiredResult({
-    ResultMetaObject? $meta,
-    InputRequests? inputRequests,
-    String? requestState,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': 'input_required',
-          if (inputRequests != null) 'inputRequests': inputRequests,
-          if (requestState != null) 'requestState': requestState,
-          ...?additionalData,
-        });
-
-  @override
-  Map<String, Object?> toMap() => data;
-
-  factory InputRequiredResult.toMCP(Map<String, Object?> map) {
-    return InputRequiredResult(
-      $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
-          : null,
-      inputRequests: map['inputRequests'],
-      requestState: map['requestState'] as String?,
-      additionalData: Map<String, Object?>.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'inputRequests' ||
-              key == 'requestState',
-        ),
-    );
-  }
-}
-
-/// Discriminated union: either an [InputRequiredResult] pause or the
-/// completed [CallToolResult], as returned by `CallToolResultResponse.result`.
-abstract class CallToolResultOutcome implements MCP {
-  factory CallToolResultOutcome.toMCP(Map<String, Object?> map) {
-    if (map['resultType'] == 'input_required') {
-      return InputRequiredResult.toMCP(map);
-    }
-    return CallToolResult.toMCP(map);
-  }
-}
-
-/// Discriminated union: either an [InputRequiredResult] pause or the
-/// completed [GetPromptResult], as returned by `GetPromptResultResponse.result`.
-abstract class GetPromptResultOutcome implements MCP {
-  factory GetPromptResultOutcome.toMCP(Map<String, Object?> map) {
-    if (map['resultType'] == 'input_required') {
-      return InputRequiredResult.toMCP(map);
-    }
-    return GetPromptResult.toMCP(map);
-  }
-}
-
-/// Discriminated union: either an [InputRequiredResult] pause or the
-/// completed [ReadResourceResult], as returned by
-/// `ReadResourceResultResponse.result`.
-abstract class ReadResourceResultOutcome implements MCP {
-  factory ReadResourceResultOutcome.toMCP(Map<String, Object?> map) {
-    if (map['resultType'] == 'input_required') {
-      return InputRequiredResult.toMCP(map);
-    }
-    return ReadResourceResult.toMCP(map);
   }
 }
 
@@ -399,7 +209,7 @@ class JSONRPCRequest extends MCP {
 
 /// Optional client hints attached to MCP content objects.
 ///
-/// See [MCP spec – Annotations](https://modelcontextprotocol.io/specification/2026-07-28/schema).
+/// See [MCP spec – Annotations](https://modelcontextprotocol.io/specification/2025-11-25/schema).
 class Annotations extends MCP {
   /// Importance from `0` (least) to `1` (most important).
   int? priority;
@@ -437,7 +247,11 @@ class Annotations extends MCP {
 
 /// A successful result that carries no data.
 class EmptyResult extends Result {
-  EmptyResult({super.$meta, super.resultType = 'complete'});
+  EmptyResult() : super(meta: null, unknown: null);
+  @override
+  Map<String, Object?> toMap() {
+    return {};
+  }
 }
 
 /// An optionally-sized icon that may be displayed in a UI.
@@ -476,9 +290,9 @@ class Icon extends MCP {
 }
 
 /// Parameters shared by MCP notifications.
-class NotificationParams extends MCP {
-  /// Optional notification metadata.
-  NotificationMetaObject? $meta;
+class NotificationParams extends TaskStatusNotificationParams {
+  /// Optional request metadata.
+  RequestMetaObject? $meta;
 
   NotificationParams({this.$meta});
 
@@ -490,7 +304,7 @@ class NotificationParams extends MCP {
   factory NotificationParams.toMCP(Map<String, Object?> map) {
     return NotificationParams(
       $meta: map['_meta'] != null
-          ? NotificationMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
     );
   }
@@ -498,81 +312,14 @@ class NotificationParams extends MCP {
 
 /// The `_meta` object carried inside request params.
 ///
-/// Every request now declares its own protocol negotiation state —
-/// [protocolVersion] and [clientCapabilities] are required on every request
-/// rather than negotiated once via an `initialize` handshake.
+/// May contain a `progressToken` used for out-of-band progress notifications.
 class RequestMetaObject extends MapMC<String, Object?> {
-  RequestMetaObject({
-    String? progressToken,
-    required String protocolVersion,
-    required ClientCapabilities clientCapabilities,
-    Implementation? clientInfo,
-    @Deprecated(
-      'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-      'Remains in the specification for at least twelve months.',
-    )
-    LoggingLevel? logLevel,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if (progressToken != null) 'progressToken': progressToken,
-          'io.modelcontextprotocol/protocolVersion': protocolVersion,
-          'io.modelcontextprotocol/clientCapabilities':
-              clientCapabilities.toMap(),
-          if (clientInfo != null)
-            'io.modelcontextprotocol/clientInfo': clientInfo.toMap(),
-          if (logLevel != null)
-            'io.modelcontextprotocol/logLevel': logLevel.toString(),
-          ...?additionalData,
-        });
+  RequestMetaObject({String? progressToken})
+      : super({'progressToken': progressToken});
 
-  /// Out-of-band progress-notification correlation token.
   String? get progressToken => data['progressToken'] as String?;
 
   set progressToken(String? value) => data['progressToken'] = value;
-
-  /// The MCP protocol version being used for this request. Required.
-  String get protocolVersion =>
-      data['io.modelcontextprotocol/protocolVersion'] as String;
-
-  set protocolVersion(String value) =>
-      data['io.modelcontextprotocol/protocolVersion'] = value;
-
-  /// The client's capabilities for this specific request. Required.
-  ClientCapabilities get clientCapabilities => ClientCapabilities.toMCP(
-        data['io.modelcontextprotocol/clientCapabilities']
-            as Map<String, Object?>,
-      );
-
-  set clientCapabilities(ClientCapabilities value) =>
-      data['io.modelcontextprotocol/clientCapabilities'] = value.toMap();
-
-  /// Self-reported information about the calling client.
-  Implementation? get clientInfo =>
-      data['io.modelcontextprotocol/clientInfo'] != null
-          ? Implementation.toMCP(
-              data['io.modelcontextprotocol/clientInfo']
-                  as Map<String, Object?>,
-            )
-          : null;
-
-  set clientInfo(Implementation? value) =>
-      data['io.modelcontextprotocol/clientInfo'] = value?.toMap();
-
-  /// The desired log level for this request.
-  @Deprecated(
-    'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-    'Remains in the specification for at least twelve months.',
-  )
-  LoggingLevel? get logLevel => data['io.modelcontextprotocol/logLevel'] != null
-      ? LoggingLevel.to(data['io.modelcontextprotocol/logLevel'] as String)
-      : null;
-
-  @Deprecated(
-    'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-    'Remains in the specification for at least twelve months.',
-  )
-  set logLevel(LoggingLevel? value) =>
-      data['io.modelcontextprotocol/logLevel'] = value?.toString();
 
   @override
   Map<String, Object?> toMap() {
@@ -580,32 +327,7 @@ class RequestMetaObject extends MapMC<String, Object?> {
   }
 
   factory RequestMetaObject.toMCP(Map<String, Object?> map) {
-    return RequestMetaObject(
-      progressToken: map['progressToken']?.toString(),
-      protocolVersion: map['io.modelcontextprotocol/protocolVersion'] as String,
-      clientCapabilities: ClientCapabilities.toMCP(
-        map['io.modelcontextprotocol/clientCapabilities']
-            as Map<String, Object?>,
-      ),
-      clientInfo: map['io.modelcontextprotocol/clientInfo'] != null
-          ? Implementation.toMCP(
-              map['io.modelcontextprotocol/clientInfo'] as Map<String, Object?>,
-            )
-          : null,
-      // ignore: deprecated_member_use_from_same_package
-      logLevel: map['io.modelcontextprotocol/logLevel'] != null
-          ? LoggingLevel.to(map['io.modelcontextprotocol/logLevel'] as String)
-          : null,
-      additionalData: Map<String, Object?>.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == 'progressToken' ||
-              key == 'io.modelcontextprotocol/protocolVersion' ||
-              key == 'io.modelcontextprotocol/clientCapabilities' ||
-              key == 'io.modelcontextprotocol/clientInfo' ||
-              key == 'io.modelcontextprotocol/logLevel',
-        ),
-    );
+    return RequestMetaObject(progressToken: map['progressToken']?.toString());
   }
 }
 
@@ -614,62 +336,25 @@ class PaginatedRequestParams extends MCP {
   /// Opaque pagination cursor from a previous response.
   String? cursor;
 
-  /// Request metadata (required — carries protocol version & capabilities).
-  RequestMetaObject $meta;
+  /// Optional request metadata.
+  RequestMetaObject? $meta;
 
-  PaginatedRequestParams({this.cursor, required this.$meta});
+  PaginatedRequestParams({this.cursor, this.$meta});
 
   @override
   Map<String, Object?> toMap() {
     return {
       if (cursor != null) 'cursor': cursor,
-      '_meta': $meta.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
     };
   }
 
   factory PaginatedRequestParams.toMCP(Map<String, Object?> map) {
     return PaginatedRequestParams(
       cursor: map['cursor'] as String?,
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
-    );
-  }
-}
-
-/// Base params shape for requests that may resume a paused multi-round-trip
-/// operation by supplying [inputResponses] and/or [requestState].
-///
-/// [GetPromptRequestParams], [ReadResourceRequestParams], and
-/// [CallToolRequestParams] all extend this.
-class InputResponseRequestParams extends MCP {
-  /// Request metadata (required — carries protocol version & capabilities).
-  RequestMetaObject $meta;
-
-  /// Responses to a prior [InputRequiredResult.inputRequests].
-  InputResponses? inputResponses;
-
-  /// Opaque state token echoed back from a prior [InputRequiredResult].
-  String? requestState;
-
-  InputResponseRequestParams({
-    required this.$meta,
-    this.inputResponses,
-    this.requestState,
-  });
-
-  @override
-  Map<String, Object?> toMap() {
-    return {
-      '_meta': $meta.toMap(),
-      if (inputResponses != null) 'inputResponses': inputResponses,
-      if (requestState != null) 'requestState': requestState,
-    };
-  }
-
-  factory InputResponseRequestParams.toMCP(Map<String, Object?> map) {
-    return InputResponseRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
-      inputResponses: map['inputResponses'],
-      requestState: map['requestState'] as String?,
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
     );
   }
 }
@@ -767,10 +452,7 @@ class ContentBlock extends MCP {
 /// Audio content block for LLM interactions.
 ///
 /// [data] must be base64-encoded audio bytes.
-class AudioContent extends ContentBlock
-    // ignore: deprecated_member_use_from_same_package
-    implements
-        SamplingMessageContentBlock {
+class AudioContent extends ContentBlock {
   AudioContent({
     required super.data,
     required super.mimeType,
@@ -863,6 +545,39 @@ class BlobResourceContents extends ResourceContents {
   }
 }
 
+/// Plain-text resource content embedded in a content block.
+class TextResourceContent extends ContentBlock {
+  /// The UTF-8 text of the resource.
+  String text;
+
+  TextResourceContent({
+    required this.text,
+    required super.data,
+    required super.mimeType,
+    super.annotations,
+    super.$meta,
+  }) : super(type: 'text');
+
+  @override
+  Map<String, Object?> toMap() {
+    return {...super.toMap(), 'text': text};
+  }
+
+  factory TextResourceContent.toMCP(Map<String, Object?> map) {
+    return TextResourceContent(
+      text: map['text'] as String,
+      data: map['data'] as String,
+      mimeType: map['mimeType'] as String,
+      annotations: map['annotations'] != null
+          ? Annotations.toMCP(map['annotations'] as Map<String, Object?>)
+          : null,
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+    );
+  }
+}
+
 /// An MCP resource embedded inside a prompt or tool-call result.
 class EmbeddedResource extends ContentBlock {
   /// The embedded resource contents.
@@ -899,10 +614,7 @@ class EmbeddedResource extends ContentBlock {
 /// Image content block for LLM interactions.
 ///
 /// [data] must be base64-encoded image bytes.
-class ImageContent extends ContentBlock
-    // ignore: deprecated_member_use_from_same_package
-    implements
-        SamplingMessageContentBlock {
+class ImageContent extends ContentBlock {
   ImageContent({
     required super.data,
     required super.mimeType,
@@ -1002,10 +714,7 @@ class ResourceLink extends ContentBlock {
 }
 
 /// Plain-text content for LLM interactions.
-class TextContent extends ContentBlock
-    // ignore: deprecated_member_use_from_same_package
-    implements
-        SamplingMessageContentBlock {
+class TextContent extends ContentBlock {
   /// The text payload.
   String text;
 
@@ -1102,13 +811,13 @@ class CompleteRequestParamsContext extends MCP {
 }
 
 class CompleteRequestParams extends MCP {
-  RequestMetaObject $meta;
+  RequestMetaObject? $meta;
   Reference ref;
   CompleteRequestParamsArgument argument;
   CompleteRequestParamsContext? context;
 
   CompleteRequestParams({
-    required this.$meta,
+    this.$meta,
     required this.ref,
     required this.argument,
     this.context,
@@ -1117,7 +826,7 @@ class CompleteRequestParams extends MCP {
   @override
   Map<String, Object?> toMap() {
     return {
-      '_meta': $meta.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
       'ref': ref.toMap(),
       'argument': argument.toMap(),
       if (context != null) 'context': context!.toMap(),
@@ -1126,8 +835,10 @@ class CompleteRequestParams extends MCP {
 
   factory CompleteRequestParams.toMCP(Map<String, Object?> map) {
     return CompleteRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
-      ref: Reference.toMCP(map['ref'] as Map<String, Object?>),
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      ref: PromptReference.toMCP(map['ref'] as Map<String, Object?>),
       argument: CompleteRequestParamsArgument.toMCP(
         map['argument'] as Map<String, Object?>,
       ),
@@ -1140,19 +851,7 @@ class CompleteRequestParams extends MCP {
   }
 }
 
-/// Discriminated union of completion reference targets: either a
-/// [PromptReference] (`type: "ref/prompt"`) or a [ResourceTemplateReference]
-/// (`type: "ref/resource"`).
-abstract class Reference extends MCP {
-  Reference();
-
-  factory Reference.toMCP(Map<String, Object?> map) {
-    if (map['type'] == 'ref/resource') {
-      return ResourceTemplateReference.toMCP(map);
-    }
-    return PromptReference.toMCP(map);
-  }
-}
+abstract class Reference extends MCP {}
 
 class PromptReference extends Reference {
   String name;
@@ -1174,9 +873,7 @@ class PromptReference extends Reference {
 }
 
 class ResourceTemplateReference extends Reference {
-  /// Discriminator. Note this is `"ref/resource"`, shared with plain
-  /// resource references — not `"ref/resource_template"`.
-  String type = 'ref/resource';
+  String type = 'ref/resource_template';
   String uri;
 
   ResourceTemplateReference({required this.uri});
@@ -1240,57 +937,39 @@ class CompleteResultResponse extends MCP {
 }
 
 class CompleteResult extends MapMC<String, Object?> {
-  ResultMetaObject? $meta;
-  String resultType;
+  MetaObject? $meta;
   CompleteResultCompletion completion;
-
-  CompleteResult({
-    this.$meta,
-    this.resultType = 'complete',
-    required this.completion,
-    Map<String, Object?>? additionalData,
-  }) : super(additionalData ?? {});
+  CompleteResult({this.$meta, required this.completion})
+      : super({'_meta': $meta, 'completion': completion});
 
   @override
   Map<String, Object?> toMap() {
-    return {
-      ...super.data,
-      if ($meta != null) '_meta': $meta!.toMap(),
-      'resultType': resultType,
-      'completion': completion.toMap(),
-    };
+    return {...data, 'completion': completion.toMap(), '_meta': $meta?.toMap()};
   }
 
   factory CompleteResult.toMCP(Map<String, Object?> map) {
     return CompleteResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       completion: CompleteResultCompletion.toMCP(
         map['completion'] as Map<String, Object?>,
       ),
-      additionalData: Map.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == '_meta' || key == 'resultType' || key == 'completion',
-        ),
     );
   }
 }
 
 class CompleteResultCompletion extends MCP {
-  /// Completion values. Must not exceed 100 items.
-  List<String> values;
+  List<String> value;
   int? total;
   bool? hasMore;
 
-  CompleteResultCompletion({required this.values, this.total, this.hasMore});
+  CompleteResultCompletion({required this.value, this.total, this.hasMore});
 
   @override
   Map<String, Object?> toMap() {
     return {
-      'values': values,
+      'value': value,
       if (total != null) 'total': total,
       if (hasMore != null) 'hasMore': hasMore,
     };
@@ -1298,7 +977,7 @@ class CompleteResultCompletion extends MCP {
 
   factory CompleteResultCompletion.toMCP(Map<String, Object?> map) {
     return CompleteResultCompletion(
-      values: (map['values'] as List<dynamic>).cast<String>(),
+      value: (map['value'] as List<dynamic>).cast<String>(),
       total: map['total'] as int?,
       hasMore: map['hasMore'] as bool?,
     );
@@ -1309,7 +988,7 @@ class ElicitRequest extends MCP {
   String id;
   ElicitRequestParams params;
   String jsonrpc = '2.0';
-  String method = 'elicitation/create';
+  String method = 'completion/elicit';
 
   ElicitRequest({required this.id, required this.params});
 
@@ -1331,17 +1010,23 @@ class ElicitRequest extends MCP {
   }
 }
 
-/// Discriminated union of the two [ElicitRequest] param shapes, dispatched
-/// on [ElicitRequestFormParams.mode] / [ElicitRequestURLParams.mode]:
-/// a form-based elicitation, or a URL-based one.
-abstract class ElicitRequestParams extends MCP {
-  ElicitRequestParams();
+class ElicitRequestParams extends MCP {
+  String jsonrpc = '2.0';
+  String id;
+  ElicitResult result;
+
+  ElicitRequestParams({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
 
   factory ElicitRequestParams.toMCP(Map<String, Object?> map) {
-    if (map['mode'] == 'url') {
-      return ElicitRequestURLParams.toMCP(map);
-    }
-    return ElicitRequestFormParams.toMCP(map);
+    return ElicitRequestParams(
+      id: map['id']?.toString() ?? '-1',
+      result: ElicitResult.toMCP(map['result'] as Map<String, Object?>),
+    );
   }
 }
 
@@ -1425,27 +1110,63 @@ class BooleanSchema extends PrimitiveSchemaDefinition<bool> {
 }
 
 class ElicitRequestURLParams extends ElicitRequestParams {
-  /// Discriminator — always `"url"`.
-  String mode = "url";
+  TaskMetadata? task;
+  RequestMetaObject? $meta;
+  String node = "url";
   String message;
+  String elicitationId;
   String url;
 
-  ElicitRequestURLParams({required this.message, required this.url});
+  ElicitRequestURLParams({
+    this.task,
+    this.$meta,
+    required this.message,
+    required this.elicitationId,
+    required this.url,
+  }) : super(
+          id: '',
+          result: ElicitResult(action: ActionType.accept, content: {}),
+        );
 
   @override
   Map<String, Object?> toMap() {
     return {
-      'mode': mode,
+      if (task != null) 'task': task!.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
+      'node': node,
       'message': message,
+      'elicitationId': elicitationId,
       'url': url,
     };
   }
 
   factory ElicitRequestURLParams.toMCP(Map<String, Object?> map) {
     return ElicitRequestURLParams(
+      task: map['task'] != null
+          ? TaskMetadata.toMCP(map['task'] as Map<String, Object?>)
+          : null,
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
       message: map['message'] as String,
+      elicitationId: map['elicitationId'] as String,
       url: map['url'] as String,
     );
+  }
+}
+
+class TaskMetadata extends MCP {
+  int? ttl;
+
+  TaskMetadata({this.ttl});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {if (ttl != null) 'ttl': ttl};
+  }
+
+  factory TaskMetadata.toMCP(Map<String, Object?> map) {
+    return TaskMetadata(ttl: map['ttl'] as int?);
   }
 }
 
@@ -1602,7 +1323,6 @@ class TitledMultiSelectEnumSchema extends UntitledMultiSelectEnumSchema {
   }
 }
 
-@Deprecated('Use TitledSingleSelectEnumSchema instead.')
 class LegacyTitledEnumSchema extends EnumSchema<String> {
   List<String> $enum;
   List<String>? enumNames;
@@ -1632,20 +1352,28 @@ class LegacyTitledEnumSchema extends EnumSchema<String> {
 }
 
 class ElicitRequestFormParams extends ElicitRequestParams {
-  /// Discriminator — always `"form"` (the default).
-  String mode = "form";
+  TaskMetadata? task;
+  RequestMetaObject? $meta;
+  String node = "form";
   String message;
   ElicitRequestFormParamsSchema? requestedSchema;
 
   ElicitRequestFormParams({
+    this.task,
+    this.$meta,
     required this.message,
     this.requestedSchema,
-  });
+  }) : super(
+          id: '',
+          result: ElicitResult(action: ActionType.accept, content: {}),
+        );
 
   @override
   Map<String, Object?> toMap() {
     return {
-      'mode': mode,
+      if (task != null) 'task': task!.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
+      'node': node,
       'message': message,
       if (requestedSchema != null) 'requestedSchema': requestedSchema!.toMap(),
     };
@@ -1653,12 +1381,16 @@ class ElicitRequestFormParams extends ElicitRequestParams {
 
   factory ElicitRequestFormParams.toMCP(Map<String, Object?> map) {
     return ElicitRequestFormParams(
-      message: map['message'] as String,
-      requestedSchema: map['requestedSchema'] != null
-          ? ElicitRequestFormParamsSchema.toMCP(
-              map['requestedSchema'] as Map<String, Object?>,
-            )
+      task: map['task'] != null
+          ? TaskMetadata.toMCP(map['task'] as Map<String, Object?>)
           : null,
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      message: map['message'] as String,
+      requestedSchema: ElicitRequestFormParamsSchema.toMCP(
+        map['requestedSchema'] as Map<String, Object?>,
+      ),
     );
   }
 }
@@ -1788,14 +1520,90 @@ class NumberSchema extends PrimitiveSchemaDefinition<num> {
   }
 }
 
+/// The MCP `initialize` request sent by the client on first connect.
+class InitializeRequest extends MCP {
+  /// JSON-RPC version string.
+  String jsonrpc = '2.0';
+
+  /// Fixed method name.
+  String method = 'initialize';
+
+  /// Request id.
+  String id;
+
+  /// Initialization parameters.
+  InitializeRequestParams params;
+
+  InitializeRequest({required this.id, required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'method': method,
+      'id': id,
+      'params': params.toMap(),
+    };
+  }
+
+  factory InitializeRequest.toMCP(Map<String, Object?> map) {
+    return InitializeRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: InitializeRequestParams.toMCP(
+        map['params'] as Map<String, Object?>,
+      ),
+    );
+  }
+}
+
+/// Parameters for an `initialize` request.
+class InitializeRequestParams extends MCP {
+  /// Optional request metadata.
+  RequestMetaObject? $meta;
+
+  /// Highest MCP protocol version the client supports.
+  String protocolVersion;
+
+  /// Client-declared capabilities.
+  ClientCapabilities capabilities;
+
+  /// Information about this client implementation.
+  Implementation clientInfo;
+
+  InitializeRequestParams({
+    this.$meta,
+    required this.protocolVersion,
+    required this.capabilities,
+    required this.clientInfo,
+  });
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      if ($meta != null) '\$meta': $meta!.toMap(),
+      'protocolVersion': protocolVersion,
+      'capabilities': capabilities.toMap(),
+      'clientInfo': clientInfo.toMap(),
+    };
+  }
+
+  factory InitializeRequestParams.toMCP(Map<String, Object?> map) {
+    return InitializeRequestParams(
+      $meta: map['\$meta'] != null
+          ? RequestMetaObject.toMCP(map['\$meta'] as Map<String, Object?>)
+          : null,
+      protocolVersion: map['protocolVersion'] as String,
+      capabilities: ClientCapabilities.toMCP(
+        map['capabilities'] as Map<String, Object?>,
+      ),
+      clientInfo: Implementation.toMCP(
+        map['clientInfo'] as Map<String, Object?>,
+      ),
+    );
+  }
+}
+
 /// Capabilities declared by the MCP client.
-///
-/// Known keys: `experimental`, `elicitation` (`{form?, url?}`),
-/// `extensions`.
-///
-/// `roots` and `sampling` remain valid keys but are deprecated as of
-/// protocol version 2026-07-28 (SEP-2577); they remain in the specification
-/// for at least twelve months. See the deprecated features registry.
 class ClientCapabilities extends MapMC<String, Object?> {
   ClientCapabilities(super.data);
 
@@ -1824,7 +1632,7 @@ class Implementation extends MCP {
   String? title;
 
   /// Implementation version string.
-  String version;
+  String? version;
 
   /// Optional website URL.
   String? websiteUrl;
@@ -1834,7 +1642,7 @@ class Implementation extends MCP {
     required this.name,
     this.description,
     this.title,
-    required this.version,
+    this.version,
     this.websiteUrl,
   });
 
@@ -1845,7 +1653,7 @@ class Implementation extends MCP {
       'name': name,
       if (description != null) 'description': description,
       if (title != null) 'title': title,
-      'version': version,
+      if (version != null) 'version': version,
       if (websiteUrl != null) 'websiteUrl': websiteUrl,
     };
   }
@@ -1860,21 +1668,89 @@ class Implementation extends MCP {
       name: map['name'] as String,
       description: map['description'] as String?,
       title: map['title'] as String?,
-      version: map['version'] as String,
+      version: map['version'] as String?,
       websiteUrl: map['websiteUrl'] as String?,
     );
   }
 }
 
+class InitializeResultResponse extends MCP {
+  String jsonrpc = '2.0';
+  String id;
+  InitializeResult result;
+
+  InitializeResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory InitializeResultResponse.toMCP(Map<String, Object?> map) {
+    return InitializeResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: InitializeResult.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+/// The server's response to an `initialize` request.
+class InitializeResult extends MapMC<String, Object?> {
+  /// Optional metadata.
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+      : null;
+  String get protocolVersion => data['protocolVersion'] as String;
+  ServerCapabilities get capabilities =>
+      ServerCapabilities.toMCP(data['capabilities'] as Map<String, Object?>);
+  Implementation get serverInfo =>
+      Implementation.toMCP(data['serverInfo'] as Map<String, Object?>);
+  String? get instructions => data['instructions'] as String?;
+
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
+  set protocolVersion(String value) => data['protocolVersion'] = value;
+  set capabilities(ServerCapabilities value) =>
+      data['capabilities'] = value.toMap();
+  set serverInfo(Implementation value) => data['serverInfo'] = value.toMap();
+  set instructions(String? value) => data['instructions'] = value;
+
+  InitializeResult({
+    MetaObject? $meta,
+    String? protocolVersion = '2025-11-25',
+    required ServerCapabilities capabilities,
+    required Implementation serverInfo,
+    String? instructions,
+  }) : super({
+          if ($meta != null) '_meta': $meta.toMap(),
+          'protocolVersion': protocolVersion,
+          'capabilities': capabilities.toMap(),
+          'serverInfo': serverInfo.toMap(),
+          if (instructions != null) 'instructions': instructions,
+        });
+
+  @override
+  Map<String, Object?> toMap() {
+    return data;
+  }
+
+  factory InitializeResult.toMCP(Map<String, Object?> map) {
+    return InitializeResult(
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      protocolVersion: map['protocolVersion'] as String,
+      capabilities: ServerCapabilities.toMCP(
+        map['capabilities'] as Map<String, Object?>,
+      ),
+      serverInfo: Implementation.toMCP(
+        map['serverInfo'] as Map<String, Object?>,
+      ),
+      instructions: map['instructions'] as String?,
+    );
+  }
+}
+
 /// Capabilities declared by the MCP server.
-///
-/// Known keys: `experimental`, `completions`, `prompts` (`{listChanged?}`),
-/// `resources` (`{subscribe?, listChanged?}`), `tools` (`{listChanged?}`),
-/// `extensions`.
-///
-/// `logging` remains a valid key but is deprecated as of protocol version
-/// 2026-07-28 (SEP-2577); it remains in the specification for at least
-/// twelve months. See the deprecated features registry.
 class ServerCapabilities extends MapMC<String, Object?> {
   ServerCapabilities(super.data);
 
@@ -1888,16 +1764,81 @@ class ServerCapabilities extends MapMC<String, Object?> {
   }
 }
 
-/// Sent by the client to indicate it is cancelling a previously-issued
-/// request.
-///
-/// On stdio, the server also sends this notification, solely to terminate a
-/// [SubscriptionsListenRequest] stream: it references the ID of the
-/// `subscriptions/listen` request that opened the stream. Servers MUST NOT
-/// use this notification to cancel any other request.
+class SetLevelRequest extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  String method = "logging/setLevel";
+  SetLevelRequestParams params;
+
+  SetLevelRequest({required this.id, required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      'params': params.toMap(),
+    };
+  }
+
+  factory SetLevelRequest.toMCP(Map<String, Object?> map) {
+    return SetLevelRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: SetLevelRequestParams.toMCP(
+        map['params'] as Map<String, Object?>,
+      ),
+    );
+  }
+}
+
+class SetLevelRequestParams extends MCP {
+  RequestMetaObject? $meta;
+  LoggingLevel level;
+
+  SetLevelRequestParams({this.$meta, required this.level});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      if ($meta != null) '_meta': $meta!.toMap(),
+      'level': level.toString(),
+    };
+  }
+
+  factory SetLevelRequestParams.toMCP(Map<String, Object?> map) {
+    return SetLevelRequestParams(
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      level: LoggingLevel.to(map['level'] as String),
+    );
+  }
+}
+
+class SetLevelResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  Result result;
+
+  SetLevelResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory SetLevelResultResponse.toMCP(Map<String, Object?> map) {
+    return SetLevelResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: Result.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
 class CancelledNotification extends MCP {
   String jsonrpc = "2.0";
-  String method = "notifications/cancelled";
+  String method = "notification/cancelled";
   CancelledNotificationParams params;
 
   CancelledNotification({required this.params});
@@ -1917,21 +1858,17 @@ class CancelledNotification extends MCP {
 }
 
 class CancelledNotificationParams extends MCP {
-  NotificationMetaObject? $meta;
-  String requestId;
+  MetaObject? $meta;
+  String? requestId;
   String? reason;
 
-  CancelledNotificationParams({
-    this.$meta,
-    required this.requestId,
-    this.reason,
-  });
+  CancelledNotificationParams({this.$meta, this.requestId, this.reason});
 
   @override
   Map<String, Object?> toMap() {
     return {
       if ($meta != null) '_meta': $meta!.toMap(),
-      'requestId': requestId,
+      if (requestId != null) 'requestId': requestId,
       if (reason != null) 'reason': reason,
     };
   }
@@ -1939,19 +1876,120 @@ class CancelledNotificationParams extends MCP {
   factory CancelledNotificationParams.toMCP(Map<String, Object?> map) {
     return CancelledNotificationParams(
       $meta: map['_meta'] != null
-          ? NotificationMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      requestId: map['requestId'] as String,
+      requestId: map['requestId'] as String?,
       reason: map['reason'] as String?,
     );
   }
 }
 
-/// Parameters for a `notifications/message` notification.
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
+class InitializedNotification extends MCP {
+  String jsonrpc = "2.0";
+  String method = "notifications/initialized";
+  NotificationParams? params;
+
+  InitializedNotification({this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'method': method,
+      if (params != null) 'params': params!.toMap(),
+    };
+  }
+
+  factory InitializedNotification.toMCP(Map<String, Object?> map) {
+    return InitializedNotification(
+      params: map['params'] != null
+          ? NotificationParams.toMCP(map['params'] as Map<String, Object?>)
+          : null,
+    );
+  }
+}
+
+class TaskStatusNotification extends MCP {
+  String jsonrpc = "2.0";
+  String method = "notifications/tasks/status";
+  TaskStatusNotificationParams params;
+
+  TaskStatusNotification({required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
+  }
+
+  factory TaskStatusNotification.toMCP(Map<String, Object?> map) {
+    return TaskStatusNotification(
+      params: Task.toMCP(map['params'] as Map<String, Object?>),
+    );
+  }
+}
+
+abstract class TaskStatusNotificationParams implements MCP {}
+
+/// Data associated with an MCP task.
+class Task extends TaskStatusNotificationParams implements CancelTaskResult {
+  /// Unique task identifier.
+  String taskId;
+
+  /// Current task state.
+  TaskStatus status;
+
+  /// Optional human-readable status description.
+  String? statusMessage;
+
+  /// ISO 8601 creation timestamp.
+  String createdAt;
+
+  /// ISO 8601 last-updated timestamp.
+  String lastUpdatedAt;
+
+  /// Retention duration in ms from creation; `null` = unlimited.
+  int? ttl;
+
+  /// Suggested polling interval in ms.
+  int? pollInterval;
+
+  Task({
+    required this.taskId,
+    required this.status,
+    this.statusMessage,
+    required this.createdAt,
+    required this.lastUpdatedAt,
+    this.ttl,
+    this.pollInterval,
+  });
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'taskId': taskId,
+      'status': status.toString(),
+      if (statusMessage != null) 'statusMessage': statusMessage,
+      'createdAt': createdAt,
+      'lastUpdatedAt': lastUpdatedAt,
+      if (ttl != null) 'ttl': ttl,
+      if (pollInterval != null) 'pollInterval': pollInterval,
+    };
+  }
+
+  factory Task.toMCP(Map<String, Object?> map) {
+    return Task(
+      taskId: map['taskId'] as String,
+      status: TaskStatus.to(map['status'] as String),
+      statusMessage: map['statusMessage'] as String?,
+      createdAt: map['createdAt'] as String,
+      lastUpdatedAt: map['lastUpdatedAt'] as String,
+      ttl: map['ttl'] as int?,
+      pollInterval: map['pollInterval'] as int?,
+    );
+  }
+}
+
+/// Parameters for a `logging/message` notification.
 class LoggingMessageNotificationParams extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
@@ -1982,7 +2020,6 @@ class LoggingMessageNotificationParams extends MCP {
     };
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory LoggingMessageNotificationParams.toMCP(Map<String, Object?> map) {
     return LoggingMessageNotificationParams(
       $meta: map['_meta'] != null
@@ -1995,36 +2032,11 @@ class LoggingMessageNotificationParams extends MCP {
   }
 }
 
-/// A `notifications/message` (`logging/message`) notification.
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
-class LoggingMessageNotification extends MCP {
-  String jsonrpc = "2.0";
-  String method = "notifications/message";
-
-  // ignore: deprecated_member_use_from_same_package
-  LoggingMessageNotificationParams params;
-
-  LoggingMessageNotification({required this.params});
-
-  @override
-  Map<String, Object?> toMap() {
-    return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
-  }
-
-  // ignore: deprecated_member_use_from_same_package
-  factory LoggingMessageNotification.toMCP(Map<String, Object?> map) {
-    return LoggingMessageNotification(
-      params: LoggingMessageNotificationParams.toMCP(
-        map['params'] as Map<String, Object?>,
-      ),
-    );
-  }
-}
-
 class ProgressNotification extends MCP {
+  ///jsonrpc: “2.0”;
+  ///method: “notifications/progress”;
+  ///params: ProgressNotificationParams;
+
   String jsonrpc = "2.0";
   String method = "notifications/progress";
   ProgressNotificationParams params;
@@ -2035,18 +2047,16 @@ class ProgressNotification extends MCP {
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
-
-  factory ProgressNotification.toMCP(Map<String, Object?> map) {
-    return ProgressNotification(
-      params: ProgressNotificationParams.toMCP(
-        map['params'] as Map<String, Object?>,
-      ),
-    );
-  }
 }
 
 class ProgressNotificationParams extends MCP {
-  NotificationMetaObject? $meta;
+  ///_meta?: MetaObject;
+  ///progressToken: ProgressToken;
+  ///progress: number;
+  ///total?: number;
+  ///message?: string;
+
+  MetaObject? $meta;
   String progressToken;
   num progress;
   num? total;
@@ -2074,7 +2084,7 @@ class ProgressNotificationParams extends MCP {
   factory ProgressNotificationParams.toMCP(Map<String, Object?> map) {
     return ProgressNotificationParams(
       $meta: map['_meta'] != null
-          ? NotificationMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
       progressToken: map['progressToken'] as String,
       progress: map['progress'] as num,
@@ -2135,25 +2145,40 @@ class ResourceUpdatedNotification extends MCP {
 }
 
 class ResourceUpdatedNotificationParams extends MCP {
-  NotificationMetaObject? $meta;
-  String uri;
+  /// jsonrpc: “2.0”;
+  /// method: “notifications/resources/updated”;
+  /// params: ResourceUpdatedNotificationParams;
 
-  ResourceUpdatedNotificationParams({this.$meta, required this.uri});
+  MetaObject? $meta;
+  String resourceId;
+  String? resourceType;
+  Map<String, Object?>? data;
+
+  ResourceUpdatedNotificationParams({
+    this.$meta,
+    required this.resourceId,
+    this.resourceType,
+    this.data,
+  });
 
   @override
   Map<String, Object?> toMap() {
     return {
       if ($meta != null) '_meta': $meta!.toMap(),
-      'uri': uri,
+      'resourceId': resourceId,
+      if (resourceType != null) 'resourceType': resourceType,
+      if (data != null) 'data': data,
     };
   }
 
   factory ResourceUpdatedNotificationParams.toMCP(Map<String, Object?> map) {
     return ResourceUpdatedNotificationParams(
       $meta: map['_meta'] != null
-          ? NotificationMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      uri: map['uri'] as String,
+      resourceId: map['resourceId'] as String,
+      resourceType: map['resourceType'] as String?,
+      data: map['data'] as Map<String, Object?>?,
     );
   }
 }
@@ -2208,23 +2233,101 @@ class ToolListChangedNotification extends MCP {
   }
 }
 
-/// Common params for any request.
-///
-/// Every request declares its own protocol negotiation state via [$meta]
-/// rather than relying on a one-time `initialize` handshake.
-class RequestParams extends MCP {
-  RequestMetaObject $meta;
+class ElicitationCompleteNotification extends MCP {
+  ///jsonrpc: “2.0”;
+  ///method: “notifications/elicitation/complete”;
+  ///params: { elicitationId: string };
 
-  RequestParams({required this.$meta});
+  String jsonrpc = "2.0";
+  String method = "notifications/elicitation/complete";
+  ElicitationCompleteNotificationParams params;
+
+  ElicitationCompleteNotification({required this.params});
 
   @override
   Map<String, Object?> toMap() {
-    return {'_meta': $meta.toMap()};
+    return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
+  }
+
+  factory ElicitationCompleteNotification.toMCP(Map<String, Object?> map) {
+    return ElicitationCompleteNotification(
+      params: ElicitationCompleteNotificationParams.toMCP(
+        map['params'] as Map<String, Object?>,
+      ),
+    );
+  }
+}
+
+class ElicitationCompleteNotificationParams extends MCP {
+  String elicitationId;
+
+  ElicitationCompleteNotificationParams({required this.elicitationId});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'elicitationId': elicitationId};
+  }
+
+  factory ElicitationCompleteNotificationParams.toMCP(
+    Map<String, Object?> map,
+  ) {
+    return ElicitationCompleteNotificationParams(
+      elicitationId: map['elicitationId'] as String,
+    );
+  }
+}
+
+/// A `ping` request used to check liveness of the other party.
+class PingRequest extends MCP {
+  /// JSON-RPC version string.
+  String jsonrpc = "2.0";
+
+  /// Request id.
+  String id;
+
+  /// Fixed method name.
+  String method = "ping";
+
+  /// Optional request params.
+  RequestParams? params;
+
+  PingRequest({required this.id, this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      if (params != null) 'params': params!.toMap(),
+    };
+  }
+
+  factory PingRequest.toMCP(Map<String, Object?> map) {
+    return PingRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: map['params'] != null
+          ? RequestParams.toMCP(map['params'] as Map<String, Object?>)
+          : null,
+    );
+  }
+}
+
+class RequestParams extends MCP {
+  MetaObject? $meta;
+
+  RequestParams({this.$meta});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {if ($meta != null) '_meta': $meta!.toMap()};
   }
 
   factory RequestParams.toMCP(Map<String, Object?> map) {
     return RequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
     );
   }
 }
@@ -2250,6 +2353,348 @@ class PromptListChangedNotification extends MCP {
       params: map['params'] != null
           ? NotificationParams.toMCP(map['params'] as Map<String, Object?>)
           : null,
+    );
+  }
+}
+
+class PingResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  Result result;
+
+  PingResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory PingResultResponse.toMCP(Map<String, Object?> map) {
+    return PingResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: Result.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+class CreateTaskResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  CreateTaskResult result;
+
+  CreateTaskResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory CreateTaskResultResponse.toMCP(Map<String, Object?> map) {
+    return CreateTaskResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: CreateTaskResult.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+class CreateTaskResult extends MapMC<String, Object?> {
+  Task get task => Task.toMCP(data['task'] as Map<String, Object?>);
+
+  set task(Task value) => data['task'] = value.toMap();
+
+  CreateTaskResult({MetaObject? $meta, required Task task})
+      : super(
+            {if ($meta != null) '_meta': $meta.toMap(), 'task': task.toMap()});
+
+  @override
+  Map<String, Object?> toMap() {
+    return data;
+  }
+
+  factory CreateTaskResult.toMCP(Map<String, Object?> map) {
+    return CreateTaskResult(
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      task: Task.toMCP(map['task'] as Map<String, Object?>),
+    );
+  }
+}
+
+class RelatedTaskMetadata extends MCP {
+  String taskId;
+  String? relationshipType;
+
+  RelatedTaskMetadata({required this.taskId, this.relationshipType});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'taskId': taskId,
+      if (relationshipType != null) 'relationshipType': relationshipType,
+    };
+  }
+
+  factory RelatedTaskMetadata.toMCP(Map<String, Object?> map) {
+    return RelatedTaskMetadata(
+      taskId: map['taskId'] as String,
+      relationshipType: map['relationshipType'] as String?,
+    );
+  }
+}
+
+class GetTaskRequest extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  String method = "tasks/get";
+  GetTaskRequestParams params;
+
+  GetTaskRequest({required this.id, required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      'params': params.toMap(),
+    };
+  }
+
+  factory GetTaskRequest.toMCP(Map<String, Object?> map) {
+    return GetTaskRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: GetTaskRequestParams.toMCP(map['params'] as Map<String, Object?>),
+    );
+  }
+}
+
+class GetTaskRequestParams extends MCP {
+  String taskId;
+
+  GetTaskRequestParams({required this.taskId});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'taskId': taskId};
+  }
+
+  factory GetTaskRequestParams.toMCP(Map<String, Object?> map) {
+    return GetTaskRequestParams(taskId: map['taskId'] as String);
+  }
+}
+
+class GetTaskPayloadRequest extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  String method = "tasks/result";
+  GetTaskRequestParams params;
+
+  GetTaskPayloadRequest({required this.id, required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      'params': params.toMap(),
+    };
+  }
+
+  factory GetTaskPayloadRequest.toMCP(Map<String, Object?> map) {
+    return GetTaskPayloadRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: GetTaskRequestParams.toMCP(map['params'] as Map<String, Object?>),
+    );
+  }
+}
+
+class GetTaskPayloadResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  GetTaskPayloadResult result;
+
+  GetTaskPayloadResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory GetTaskPayloadResultResponse.toMCP(Map<String, Object?> map) {
+    return GetTaskPayloadResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: GetTaskPayloadResult.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+class GetTaskPayloadResult extends MapMC<String, Object?> {
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+      : null;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
+
+  GetTaskPayloadResult({
+    MetaObject? $meta,
+    Map<String, Object?>? additionalData,
+  }) : super({if ($meta != null) '_meta': $meta.toMap(), ...?additionalData});
+
+  @override
+  Map<String, Object?> toMap() {
+    return data;
+  }
+
+  factory GetTaskPayloadResult.toMCP(Map<String, Object?> map) {
+    return GetTaskPayloadResult(
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      additionalData: Map.from(map)..remove('_meta'),
+    );
+  }
+}
+
+class ListTasksRequest extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  String method = "tasks/list";
+  PaginatedRequestParams? params;
+
+  ListTasksRequest({required this.id, this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      if (params != null) 'params': params!.toMap(),
+    };
+  }
+
+  factory ListTasksRequest.toMCP(Map<String, Object?> map) {
+    return ListTasksRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: map['params'] != null
+          ? PaginatedRequestParams.toMCP(map['params'] as Map<String, Object?>)
+          : null,
+    );
+  }
+}
+
+class ListTasksResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  ListTasksResult result;
+
+  ListTasksResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory ListTasksResultResponse.toMCP(Map<String, Object?> map) {
+    return ListTasksResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: ListTasksResult.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+class ListTasksResult extends MapMC<String, Object?> {
+  MetaObject? $meta;
+  String? nextCursor;
+  List<Task> tasks;
+
+  ListTasksResult({
+    this.$meta,
+    this.nextCursor,
+    required this.tasks,
+    Map<String, Object?>? additionalData,
+  }) : super(additionalData ?? {});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      ...super.data,
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (nextCursor != null) 'nextCursor': nextCursor,
+      'tasks': tasks.map((e) => e.toMap()).toList(),
+    };
+  }
+
+  factory ListTasksResult.toMCP(Map<String, Object?> map) {
+    return ListTasksResult(
+      $meta: map['_meta'] != null
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      nextCursor: map['nextCursor'] as String?,
+      tasks: (map['tasks'] as List<dynamic>)
+          .map((e) => Task.toMCP(e as Map<String, Object?>))
+          .toList(),
+      additionalData: Map.from(map)
+        ..removeWhere(
+          (key, _) => key == '_meta' || key == 'nextCursor' || key == 'tasks',
+        ),
+    );
+  }
+}
+
+class CancelTaskRequest extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  String method = "tasks/cancel";
+  GetTaskRequestParams params;
+
+  CancelTaskRequest({required this.id, required this.params});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      'jsonrpc': jsonrpc,
+      'id': id,
+      'method': method,
+      'params': params.toMap(),
+    };
+  }
+
+  factory CancelTaskRequest.toMCP(Map<String, Object?> map) {
+    return CancelTaskRequest(
+      id: map['id']?.toString() ?? '-1',
+      params: GetTaskRequestParams.toMCP(map['params'] as Map<String, Object?>),
+    );
+  }
+}
+
+class CancelTaskResultResponse extends MCP {
+  String jsonrpc = "2.0";
+  String id;
+  CancelTaskResult result;
+  CancelTaskResultResponse({required this.id, required this.result});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+  }
+
+  factory CancelTaskResultResponse.toMCP(Map<String, Object?> map) {
+    return CancelTaskResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: CancelTaskResult.toMCP(map['result'] as Map<String, Object?>),
+    );
+  }
+}
+
+abstract class CancelTaskResult implements MCP {
+  factory CancelTaskResult.toMCP(Map<String, Object?> map) {
+    return Task(
+      taskId: map['taskId'] as String,
+      status: TaskStatus.to(map['status'] as String),
+      createdAt: map['createdAt'] as String,
+      lastUpdatedAt: map['lastUpdatedAt'] as String,
     );
   }
 }
@@ -2282,14 +2727,17 @@ class GetPromptRequest extends MCP {
   }
 }
 
-class GetPromptRequestParams extends InputResponseRequestParams {
+class GetPromptRequestParams extends MCP {
+  RequestMetaObject? $meta;
+  InputResponses? inputResponses;
+  String? requestState;
   String name;
   Map<String, String>? arguments;
 
   GetPromptRequestParams({
-    required super.$meta,
-    super.inputResponses,
-    super.requestState,
+    this.$meta,
+    this.inputResponses,
+    this.requestState,
     required this.name,
     this.arguments,
   });
@@ -2297,7 +2745,9 @@ class GetPromptRequestParams extends InputResponseRequestParams {
   @override
   Map<String, Object?> toMap() {
     return {
-      ...super.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (inputResponses != null) 'inputResponses': inputResponses!.toMap(),
+      if (requestState != null) 'requestState': requestState,
       'name': name,
       if (arguments != null) 'arguments': arguments,
     };
@@ -2305,7 +2755,9 @@ class GetPromptRequestParams extends InputResponseRequestParams {
 
   factory GetPromptRequestParams.toMCP(Map<String, Object?> map) {
     return GetPromptRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
@@ -2319,35 +2771,30 @@ class GetPromptRequestParams extends InputResponseRequestParams {
 class GetPromptResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
-  GetPromptResultOutcome result;
+  GetPromptResult result;
 
   GetPromptResultResponse({required this.id, required this.result});
 
   @override
   Map<String, Object?> toMap() {
-    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result};
   }
 
   factory GetPromptResultResponse.toMCP(Map<String, Object?> map) {
     return GetPromptResultResponse(
       id: map['id']?.toString() ?? '-1',
-      result: GetPromptResultOutcome.toMCP(
-        map['result'] as Map<String, Object?>,
-      ),
+      result: GetPromptResult.toMCP(map['result'] as Map<String, Object?>),
     );
   }
 }
 
-class GetPromptResult extends MapMC<String, Object?>
-    implements GetPromptResultOutcome {
-  ResultMetaObject? $meta;
-  String resultType;
+class GetPromptResult extends MapMC<String, Object?> {
+  MetaObject? $meta;
   String? description;
   List<PromptMessage> messages;
 
   GetPromptResult({
     this.$meta,
-    this.resultType = 'complete',
     this.description,
     required this.messages,
     Map<String, Object?>? additionalData,
@@ -2358,7 +2805,6 @@ class GetPromptResult extends MapMC<String, Object?>
     return {
       ...super.data,
       if ($meta != null) '_meta': $meta!.toMap(),
-      'resultType': resultType,
       if (description != null) 'description': description,
       'messages': messages.map((e) => e.toMap()).toList(),
     };
@@ -2367,9 +2813,8 @@ class GetPromptResult extends MapMC<String, Object?>
   factory GetPromptResult.toMCP(Map<String, Object?> map) {
     return GetPromptResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       description: map['description']?.toString(),
       messages: (map['messages'] as List<Map<String, Object?>>)
           .map((e) => PromptMessage.toMCP(e))
@@ -2377,10 +2822,7 @@ class GetPromptResult extends MapMC<String, Object?>
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'description' ||
-              key == 'messages',
+              key == '_meta' || key == 'description' || key == 'messages',
         ),
     );
   }
@@ -2451,40 +2893,28 @@ class ListPromptsResultResponse extends MCP {
 }
 
 class ListPromptsResult extends MapMC<String, Object?> {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   String? get nextCursor => data['nextCursor'] as String?;
   List<Prompt> get prompts => (data['prompts'] as List<dynamic>)
       .map((e) => Prompt.toMCP(e as Map<String, Object?>))
       .toList();
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set nextCursor(String? value) => data['nextCursor'] = value;
   set prompts(List<Prompt> value) =>
       data['prompts'] = value.map((e) => e.toMap()).toList();
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
   ListPromptsResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     String? nextCursor,
     required List<Prompt> prompts,
-    required num ttlMs,
-    required CacheScope cacheScope,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           if (nextCursor != null) 'nextCursor': nextCursor,
           'prompts': prompts.map((e) => e.toMap()).toList(),
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
           ...?additionalData,
         });
 
@@ -2496,15 +2926,12 @@ class ListPromptsResult extends MapMC<String, Object?> {
   factory ListPromptsResult.toMCP(Map<String, Object?> map) {
     return ListPromptsResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       nextCursor: map['nextCursor'] as String?,
       prompts: (map['prompts'] as List<dynamic>)
           .map((e) => Prompt.toMCP(e as Map<String, Object?>))
           .toList(),
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) => key == '_meta' || key == 'nextCursor' || key == 'prompts',
@@ -2663,40 +3090,28 @@ class ListResourcesResultResponse extends MCP {
 }
 
 class ListResourcesResult extends MapMC<String, Object?> {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   String? get nextCursor => data['nextCursor'] as String?;
   List<Resource> get resources => (data['resources'] as List<dynamic>)
       .map((e) => Resource.toMCP(e as Map<String, Object?>))
       .toList();
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set nextCursor(String? value) => data['nextCursor'] = value;
   set resources(List<Resource> value) =>
       data['resources'] = value.map((e) => e.toMap()).toList();
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
   ListResourcesResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     String? nextCursor,
     required List<Resource> resources,
-    required num ttlMs,
-    required CacheScope cacheScope,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           if (nextCursor != null) 'nextCursor': nextCursor,
           'resources': resources.map((e) => e.toMap()).toList(),
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
           ...?additionalData,
         });
 
@@ -2708,24 +3123,16 @@ class ListResourcesResult extends MapMC<String, Object?> {
   factory ListResourcesResult.toMCP(Map<String, Object?> map) {
     return ListResourcesResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       nextCursor: map['nextCursor'] as String?,
       resources: (map['resources'] as List<dynamic>)
           .map((e) => Resource.toMCP(e as Map<String, Object?>))
           .toList(),
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'nextCursor' ||
-              key == 'resources' ||
-              key == 'ttlMs' ||
-              key == 'cacheScope',
+              key == '_meta' || key == 'nextCursor' || key == 'resources',
         ),
     );
   }
@@ -2836,24 +3243,34 @@ class ReadResourceRequest extends MCP {
   }
 }
 
-class ReadResourceRequestParams extends InputResponseRequestParams {
+class ReadResourceRequestParams extends MCP {
+  RequestMetaObject? $meta;
+  InputResponses? inputResponses;
+  String? requestState;
   String uri;
 
   ReadResourceRequestParams({
-    required super.$meta,
-    super.inputResponses,
-    super.requestState,
+    this.$meta,
+    this.inputResponses,
+    this.requestState,
     required this.uri,
   });
 
   @override
   Map<String, Object?> toMap() {
-    return {...super.toMap(), 'uri': uri};
+    return {
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (inputResponses != null) 'inputResponses': inputResponses!.toMap(),
+      if (requestState != null) 'requestState': requestState,
+      'uri': uri,
+    };
   }
 
   factory ReadResourceRequestParams.toMCP(Map<String, Object?> map) {
     return ReadResourceRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       uri: map['uri'] as String,
@@ -2864,7 +3281,7 @@ class ReadResourceRequestParams extends InputResponseRequestParams {
 class ReadResourceResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
-  ReadResourceResultOutcome result;
+  ReadResourceResult result;
 
   ReadResourceResultResponse({required this.id, required this.result});
 
@@ -2876,45 +3293,30 @@ class ReadResourceResultResponse extends MCP {
   factory ReadResourceResultResponse.toMCP(Map<String, Object?> map) {
     return ReadResourceResultResponse(
       id: map['id']?.toString() ?? '-1',
-      result: ReadResourceResultOutcome.toMCP(
-        map['result'] as Map<String, Object?>,
-      ),
+      result: ReadResourceResult.toMCP(map['result'] as Map<String, Object?>),
     );
   }
 }
 
-class ReadResourceResult extends MapMC<String, Object?>
-    implements ReadResourceResultOutcome {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+class ReadResourceResult extends MapMC<String, Object?> {
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   List<ResourceContents> get contents => (data['contents'] as List<dynamic>)
       .map((e) => ResourceContents.toMCP(e as Map<String, Object?>))
       .toList();
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set contents(List<ResourceContents> value) =>
       data['contents'] = value.map((e) => e.toMap()).toList();
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
   ReadResourceResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     required List<ResourceContents> contents,
-    required num ttlMs,
-    required CacheScope cacheScope,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           'contents': contents.map((e) => e.toMap()).toList(),
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
           ...?additionalData,
         });
 
@@ -2926,22 +3328,14 @@ class ReadResourceResult extends MapMC<String, Object?>
   factory ReadResourceResult.toMCP(Map<String, Object?> map) {
     return ReadResourceResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       contents: (map['contents'] as List<dynamic>)
           .map((e) => ResourceContents.toMCP(e as Map<String, Object?>))
           .toList(),
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
       additionalData: Map.from(map)
         ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'contents' ||
-              key == 'ttlMs' ||
-              key == 'cacheScope',
+          (key, _) => key == '_meta' || key == 'contents',
         ),
     );
   }
@@ -3069,41 +3463,29 @@ class ListResourceTemplatesResultResponse extends MCP {
 }
 
 class ListResourceTemplatesResult extends MapMC<String, Object?> {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   String? get nextCursor => data['nextCursor'] as String?;
   List<ResourceTemplate> get resourceTemplates =>
       (data['resourceTemplates'] as List<dynamic>)
           .map((e) => ResourceTemplate.toMCP(e as Map<String, Object?>))
           .toList();
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set nextCursor(String? value) => data['nextCursor'] = value;
   set resourceTemplates(List<ResourceTemplate> value) =>
       data['resourceTemplates'] = value.map((e) => e.toMap()).toList();
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
   ListResourceTemplatesResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     String? nextCursor,
     required List<ResourceTemplate> resourceTemplates,
-    required num ttlMs,
-    required CacheScope cacheScope,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           if (nextCursor != null) 'nextCursor': nextCursor,
           'resourceTemplates': resourceTemplates.map((e) => e.toMap()).toList(),
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
           ...?additionalData,
         });
 
@@ -3115,101 +3497,51 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
   factory ListResourceTemplatesResult.toMCP(Map<String, Object?> map) {
     return ListResourceTemplatesResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       nextCursor: map['nextCursor'] as String?,
       resourceTemplates: (map['resourceTemplates'] as List<dynamic>)
           .map((e) => ResourceTemplate.toMCP(e as Map<String, Object?>))
           .toList(),
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
       additionalData: Map.from(map)
         ..removeWhere(
           (key, _) =>
               key == '_meta' ||
-              key == 'resultType' ||
               key == 'nextCursor' ||
-              key == 'resourceTemplates' ||
-              key == 'ttlMs' ||
-              key == 'cacheScope',
+              key == 'resourceTemplates',
         ),
     );
   }
 }
 
-/// Filter describing which change notifications a `subscriptions/listen`
-/// stream should deliver.
-class SubscriptionFilter extends MCP {
-  bool? toolsListChanged;
-  bool? promptsListChanged;
-  bool? resourcesListChanged;
-  List<String>? resourceSubscriptions;
+class SubscribeRequestParams extends MCP {
+  RequestMetaObject? $meta;
+  String uri;
 
-  SubscriptionFilter({
-    this.toolsListChanged,
-    this.promptsListChanged,
-    this.resourcesListChanged,
-    this.resourceSubscriptions,
-  });
+  SubscribeRequestParams({this.$meta, required this.uri});
 
   @override
   Map<String, Object?> toMap() {
-    return {
-      if (toolsListChanged != null) 'toolsListChanged': toolsListChanged,
-      if (promptsListChanged != null) 'promptsListChanged': promptsListChanged,
-      if (resourcesListChanged != null)
-        'resourcesListChanged': resourcesListChanged,
-      if (resourceSubscriptions != null)
-        'resourceSubscriptions': resourceSubscriptions,
-    };
+    return {if ($meta != null) '_meta': $meta!.toMap(), 'uri': uri};
   }
 
-  factory SubscriptionFilter.toMCP(Map<String, Object?> map) {
-    return SubscriptionFilter(
-      toolsListChanged: map['toolsListChanged'] as bool?,
-      promptsListChanged: map['promptsListChanged'] as bool?,
-      resourcesListChanged: map['resourcesListChanged'] as bool?,
-      resourceSubscriptions:
-          (map['resourceSubscriptions'] as List<dynamic>?)?.cast<String>(),
+  factory SubscribeRequestParams.toMCP(Map<String, Object?> map) {
+    return SubscribeRequestParams(
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
+      uri: map['uri'] as String,
     );
   }
 }
 
-class SubscriptionsListenRequestParams extends MCP {
-  RequestMetaObject $meta;
-  SubscriptionFilter notifications;
-
-  SubscriptionsListenRequestParams({
-    required this.$meta,
-    required this.notifications,
-  });
-
-  @override
-  Map<String, Object?> toMap() {
-    return {'_meta': $meta.toMap(), 'notifications': notifications.toMap()};
-  }
-
-  factory SubscriptionsListenRequestParams.toMCP(Map<String, Object?> map) {
-    return SubscriptionsListenRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
-      notifications: SubscriptionFilter.toMCP(
-        map['notifications'] as Map<String, Object?>,
-      ),
-    );
-  }
-}
-
-/// Opens a long-lived stream on which the server pushes change
-/// notifications, replacing the former `resources/subscribe` /
-/// `resources/unsubscribe` RPCs.
-class SubscriptionsListenRequest extends MCP {
+class SubscribeRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
-  String method = "subscriptions/listen";
-  SubscriptionsListenRequestParams params;
+  String method = "resources/subscribe";
+  SubscribeRequestParams params;
 
-  SubscriptionsListenRequest({required this.id, required this.params});
+  SubscribeRequest({required this.id, required this.params});
 
   @override
   Map<String, Object?> toMap() {
@@ -3221,190 +3553,77 @@ class SubscriptionsListenRequest extends MCP {
     };
   }
 
-  factory SubscriptionsListenRequest.toMCP(Map<String, Object?> map) {
-    return SubscriptionsListenRequest(
+  factory SubscribeRequest.toMCP(Map<String, Object?> map) {
+    return SubscribeRequest(
       id: map['id']?.toString() ?? '-1',
-      params: SubscriptionsListenRequestParams.toMCP(
+      params: SubscribeRequestParams.toMCP(
         map['params'] as Map<String, Object?>,
       ),
     );
   }
 }
 
-/// The `_meta` object carried on a [SubscriptionsListenResult].
-class SubscriptionsListenResultMetaObject extends MapMC<String, Object?> {
-  SubscriptionsListenResultMetaObject({
-    Implementation? serverInfo,
-    required String subscriptionId,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if (serverInfo != null)
-            'io.modelcontextprotocol/serverInfo': serverInfo.toMap(),
-          'io.modelcontextprotocol/subscriptionId': subscriptionId,
-          ...?additionalData,
-        });
-
-  Implementation? get serverInfo =>
-      data['io.modelcontextprotocol/serverInfo'] != null
-          ? Implementation.toMCP(
-              data['io.modelcontextprotocol/serverInfo']
-                  as Map<String, Object?>,
-            )
-          : null;
-
-  set serverInfo(Implementation? value) =>
-      data['io.modelcontextprotocol/serverInfo'] = value?.toMap();
-
-  /// The JSON-RPC ID of the `subscriptions/listen` request that opened this
-  /// stream.
-  String get subscriptionId =>
-      data['io.modelcontextprotocol/subscriptionId'].toString();
-
-  set subscriptionId(String value) =>
-      data['io.modelcontextprotocol/subscriptionId'] = value;
-
-  @override
-  Map<String, Object?> toMap() => data;
-
-  factory SubscriptionsListenResultMetaObject.toMCP(Map<String, Object?> map) {
-    return SubscriptionsListenResultMetaObject(
-      serverInfo: map['io.modelcontextprotocol/serverInfo'] != null
-          ? Implementation.toMCP(
-              map['io.modelcontextprotocol/serverInfo'] as Map<String, Object?>,
-            )
-          : null,
-      subscriptionId: map['io.modelcontextprotocol/subscriptionId'].toString(),
-      additionalData: Map<String, Object?>.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == 'io.modelcontextprotocol/serverInfo' ||
-              key == 'io.modelcontextprotocol/subscriptionId',
-        ),
-    );
-  }
-}
-
-/// Sent by the server, at most once, to gracefully terminate a
-/// `subscriptions/listen` stream. The result body is otherwise empty.
-class SubscriptionsListenResult extends MapMC<String, Object?> {
-  String get resultType => data['resultType'] as String? ?? 'complete';
-  SubscriptionsListenResultMetaObject get $meta =>
-      SubscriptionsListenResultMetaObject.toMCP(
-        data['_meta'] as Map<String, Object?>,
-      );
-
-  set resultType(String value) => data['resultType'] = value;
-  set $meta(SubscriptionsListenResultMetaObject value) =>
-      data['_meta'] = value.toMap();
-
-  SubscriptionsListenResult({
-    String resultType = 'complete',
-    required SubscriptionsListenResultMetaObject $meta,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          'resultType': resultType,
-          '_meta': $meta.toMap(),
-          ...?additionalData,
-        });
-
-  @override
-  Map<String, Object?> toMap() => data;
-
-  factory SubscriptionsListenResult.toMCP(Map<String, Object?> map) {
-    return SubscriptionsListenResult(
-      resultType: map['resultType'] as String? ?? 'complete',
-      $meta: SubscriptionsListenResultMetaObject.toMCP(
-        map['_meta'] as Map<String, Object?>,
-      ),
-      additionalData: Map<String, Object?>.from(map)
-        ..removeWhere((key, _) => key == 'resultType' || key == '_meta'),
-    );
-  }
-}
-
-class SubscriptionsListenResultResponse extends MCP {
+class SubscribeResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
-  SubscriptionsListenResult result;
+  Result result;
 
-  SubscriptionsListenResultResponse({required this.id, required this.result});
+  SubscribeResultResponse({required this.id, required this.result});
 
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
-  factory SubscriptionsListenResultResponse.toMCP(Map<String, Object?> map) {
-    return SubscriptionsListenResultResponse(
+  factory SubscribeResultResponse.toMCP(Map<String, Object?> map) {
+    return SubscribeResultResponse(
       id: map['id']?.toString() ?? '-1',
-      result: SubscriptionsListenResult.toMCP(
-        map['result'] as Map<String, Object?>,
-      ),
+      result: Result.toMCP(map['result'] as Map<String, Object?>),
     );
   }
 }
 
-/// The first message a server sends after a client opens a new
-/// `subscriptions/listen` stream, acknowledging which notifications it will
-/// deliver on it.
-class SubscriptionsAcknowledgedNotificationParams extends MCP {
-  NotificationMetaObject? $meta;
-  SubscriptionFilter notifications;
+class UnsubscribeRequestParams extends MCP {
+  RequestMetaObject? $meta;
+  String uri;
 
-  SubscriptionsAcknowledgedNotificationParams({
-    this.$meta,
-    required this.notifications,
-  });
+  UnsubscribeRequestParams({this.$meta, required this.uri});
 
   @override
   Map<String, Object?> toMap() {
-    return {
-      if ($meta != null) '_meta': $meta!.toMap(),
-      'notifications': notifications.toMap(),
-    };
+    return {if ($meta != null) '_meta': $meta!.toMap(), 'uri': uri};
   }
 
-  factory SubscriptionsAcknowledgedNotificationParams.toMCP(
-    Map<String, Object?> map,
-  ) {
-    return SubscriptionsAcknowledgedNotificationParams(
+  factory UnsubscribeRequestParams.toMCP(Map<String, Object?> map) {
+    return UnsubscribeRequestParams(
       $meta: map['_meta'] != null
-          ? NotificationMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      notifications: SubscriptionFilter.toMCP(
-        map['notifications'] as Map<String, Object?>,
-      ),
+      uri: map['uri'] as String,
     );
   }
 }
 
-class SubscriptionsAcknowledgedNotification extends MCP {
+class UnsubscribeResultResponse extends MCP {
   String jsonrpc = "2.0";
-  String method = "notifications/subscriptions/acknowledged";
-  SubscriptionsAcknowledgedNotificationParams params;
+  String id;
+  Result result;
 
-  SubscriptionsAcknowledgedNotification({required this.params});
+  UnsubscribeResultResponse({required this.id, required this.result});
 
   @override
   Map<String, Object?> toMap() {
-    return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
-  factory SubscriptionsAcknowledgedNotification.toMCP(
-    Map<String, Object?> map,
-  ) {
-    return SubscriptionsAcknowledgedNotification(
-      params: SubscriptionsAcknowledgedNotificationParams.toMCP(
-        map['params'] as Map<String, Object?>,
-      ),
+  factory UnsubscribeResultResponse.toMCP(Map<String, Object?> map) {
+    return UnsubscribeResultResponse(
+      id: map['id']?.toString() ?? '-1',
+      result: Result.toMCP(map['result'] as Map<String, Object?>),
     );
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class Root extends MCP {
   String uri;
   String? name;
@@ -3432,12 +3651,7 @@ class Root extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class ListRootsResult extends MCP {
-  // ignore: deprecated_member_use_from_same_package
   List<Root> roots;
 
   ListRootsResult({required this.roots});
@@ -3447,21 +3661,15 @@ class ListRootsResult extends MCP {
     return {'roots': roots.map((e) => e.toMap()).toList()};
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory ListRootsResult.toMCP(Map<String, Object?> map) {
     return ListRootsResult(
       roots: (map['roots'] as List<dynamic>)
-          // ignore: deprecated_member_use_from_same_package
           .map((e) => Root.toMCP(e as Map<String, Object?>))
           .toList(),
     );
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class ListRootsRequest extends MCP {
   String method = "roots/list";
   RequestParams? params;
@@ -3482,10 +3690,6 @@ class ListRootsRequest extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class ModelHint extends MCP {
   String? name;
 
@@ -3501,12 +3705,7 @@ class ModelHint extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class ModelPreferences extends MCP {
-  // ignore: deprecated_member_use_from_same_package
   List<ModelHint>? hints;
   num? costPriority;
   num? speedPriority;
@@ -3530,11 +3729,9 @@ class ModelPreferences extends MCP {
     };
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory ModelPreferences.toMCP(Map<String, Object?> map) {
     return ModelPreferences(
       hints: (map['hints'] as List<dynamic>?)
-          // ignore: deprecated_member_use_from_same_package
           ?.map((e) => ModelHint.toMCP(e as Map<String, Object?>))
           .toList(),
       costPriority: map['costPriority'] as num?,
@@ -3544,36 +3741,9 @@ class ModelPreferences extends MCP {
   }
 }
 
-/// Restricted content-block union accepted by [SamplingMessage.content].
-///
-/// Unlike the general [ContentBlock] union, sampling messages may only
-/// carry [TextContent], [ImageContent], [AudioContent], [ToolUseContent],
-/// or [ToolResultContent] — never a [ResourceLink] or [EmbeddedResource].
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
-abstract class SamplingMessageContentBlock implements MCP {
-  factory SamplingMessageContentBlock.toMCP(Map<String, Object?> map) {
-    final block = ContentBlock.toMCP(map);
-    if (block is SamplingMessageContentBlock) {
-      return block as SamplingMessageContentBlock;
-    }
-    throw ArgumentError(
-      'Unsupported SamplingMessageContentBlock type: ${map['type']}',
-    );
-  }
-}
-
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class SamplingMessage extends MCP {
   Role role;
-
-  // ignore: deprecated_member_use_from_same_package
-  List<SamplingMessageContentBlock> content;
+  List<ContentBlock> content;
   MetaObject? $meta;
 
   SamplingMessage({required this.role, required this.content, this.$meta});
@@ -3587,15 +3757,11 @@ class SamplingMessage extends MCP {
     };
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory SamplingMessage.toMCP(Map<String, Object?> map) {
     return SamplingMessage(
       role: Role.to(map['role'] as String),
       content: (map['content'] as List<dynamic>)
-          // ignore: deprecated_member_use_from_same_package
-          .map(
-            (e) => SamplingMessageContentBlock.toMCP(e as Map<String, Object?>),
-          )
+          .map((e) => ContentBlock.toMCP(e as Map<String, Object?>))
           .toList(),
       $meta: map['_meta'] != null
           ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
@@ -3604,10 +3770,6 @@ class SamplingMessage extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class ToolChoice extends MCP {
   String? mode;
 
@@ -3623,14 +3785,7 @@ class ToolChoice extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
-class ToolResultContent extends ContentBlock
-    // ignore: deprecated_member_use_from_same_package
-    implements
-        SamplingMessageContentBlock {
+class ToolResultContent extends ContentBlock {
   String toolUseId;
   List<ContentBlock> content;
   Map<String, Object?>? structuredContent;
@@ -3676,14 +3831,7 @@ class ToolResultContent extends ContentBlock
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
-class ToolUseContent extends ContentBlock
-    // ignore: deprecated_member_use_from_same_package
-    implements
-        SamplingMessageContentBlock {
+class ToolUseContent extends ContentBlock {
   String id;
   String name;
   Map<String, Object?> input;
@@ -3771,18 +3919,31 @@ class ToolAnnotations extends MCP {
 }
 
 /// Execution-related properties for a [Tool].
-/// JSON Schema (2020-12) object used for a tool's [Tool.inputSchema] or
-/// [Tool.outputSchema].
-///
-/// Exposes [properties]/[required]/[type] as typed convenience accessors,
-/// but preserves any other JSON Schema keyword (`oneOf`, `$ref`, `items`,
-/// `$defs`, etc.) losslessly via [additionalData].
+class ToolExecution extends MCP {
+  /// Whether this tool supports task-augmented execution.
+  ///
+  /// One of `"forbidden"` (default), `"optional"`, or `"required"`.
+  String? taskSupport;
+
+  ToolExecution({this.taskSupport});
+
+  @override
+  Map<String, Object?> toMap() {
+    return {if (taskSupport != null) 'taskSupport': taskSupport};
+  }
+
+  factory ToolExecution.toMCP(Map<String, Object?> map) {
+    return ToolExecution(taskSupport: map['taskSupport'] as String?);
+  }
+}
+
+/// JSON Schema object used for a tool's [inputSchema] or [outputSchema].
 class ToolSchema extends MCP {
-  /// Optional `$schema` URI. Defaults to JSON Schema 2020-12 when absent.
+  /// Optional `$schema` URI.
   String? $schema;
 
-  /// Root type; always `"object"` for tool schemas.
-  String type;
+  /// Root type; always `"object"`.
+  String type = 'object';
 
   /// Property definitions.
   Map<String, Object?>? properties;
@@ -3790,22 +3951,16 @@ class ToolSchema extends MCP {
   /// Required property names.
   List<String>? required;
 
-  /// Any other JSON Schema keyword not covered by a typed field above,
-  /// preserved losslessly on round-trip.
-  Map<String, Object?>? additionalData;
-
   ToolSchema({
     this.$schema,
     this.properties,
     this.required,
     this.type = 'object',
-    this.additionalData,
   });
 
   @override
   Map<String, Object?> toMap() {
     return {
-      ...?additionalData,
       if ($schema != null) r'$schema': $schema,
       'type': type,
       if (properties != null) 'properties': properties,
@@ -3819,14 +3974,6 @@ class ToolSchema extends MCP {
       properties: map['properties'] as Map<String, Object?>?,
       required: (map['required'] as List<dynamic>?)?.cast<String>(),
       type: map['type'] as String? ?? 'object',
-      additionalData: Map<String, Object?>.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == r'$schema' ||
-              key == 'properties' ||
-              key == 'required' ||
-              key == 'type',
-        ),
     );
   }
 }
@@ -3848,6 +3995,9 @@ class Tool extends MCP {
   /// JSON Schema for the expected call arguments.
   ToolSchema inputSchema;
 
+  /// Execution-related properties.
+  ToolExecution? execution;
+
   /// Optional JSON Schema for the structured output.
   ToolSchema? outputSchema;
 
@@ -3863,6 +4013,7 @@ class Tool extends MCP {
     this.title,
     this.description,
     required this.inputSchema,
+    this.execution,
     this.outputSchema,
     this.annotations,
     this.$meta,
@@ -3876,6 +4027,7 @@ class Tool extends MCP {
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       'inputSchema': inputSchema.toMap(),
+      if (execution != null) 'execution': execution!.toMap(),
       if (outputSchema != null) 'outputSchema': outputSchema!.toMap(),
       if (annotations != null) 'annotations': annotations!.toMap(),
       if ($meta != null) '_meta': $meta!.toMap(),
@@ -3891,6 +4043,9 @@ class Tool extends MCP {
       title: map['title'] as String?,
       description: map['description'] as String?,
       inputSchema: ToolSchema.toMCP(map['inputSchema'] as Map<String, Object?>),
+      execution: map['execution'] != null
+          ? ToolExecution.toMCP(map['execution'] as Map<String, Object?>)
+          : null,
       outputSchema: map['outputSchema'] != null
           ? ToolSchema.toMCP(map['outputSchema'] as Map<String, Object?>)
           : null,
@@ -3904,14 +4059,8 @@ class Tool extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class CreateMessageRequestParams extends MCP {
-  // ignore: deprecated_member_use_from_same_package
   List<SamplingMessage> messages;
-  // ignore: deprecated_member_use_from_same_package
   ModelPreferences? modelPreferences;
   String? systemPrompt;
   String? includeContext;
@@ -3920,7 +4069,6 @@ class CreateMessageRequestParams extends MCP {
   List<String>? stopSequences;
   Map<String, Object?>? metadata;
   List<Tool>? tools;
-  // ignore: deprecated_member_use_from_same_package
   ToolChoice? toolChoice;
 
   CreateMessageRequestParams({
@@ -3953,15 +4101,12 @@ class CreateMessageRequestParams extends MCP {
     };
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory CreateMessageRequestParams.toMCP(Map<String, Object?> map) {
     return CreateMessageRequestParams(
       messages: (map['messages'] as List<dynamic>)
-          // ignore: deprecated_member_use_from_same_package
           .map((e) => SamplingMessage.toMCP(e as Map<String, Object?>))
           .toList(),
       modelPreferences: map['modelPreferences'] != null
-          // ignore: deprecated_member_use_from_same_package
           ? ModelPreferences.toMCP(
               map['modelPreferences'] as Map<String, Object?>,
             )
@@ -3976,21 +4121,14 @@ class CreateMessageRequestParams extends MCP {
           ?.map((e) => Tool.toMCP(e as Map<String, Object?>))
           .toList(),
       toolChoice: map['toolChoice'] != null
-          // ignore: deprecated_member_use_from_same_package
           ? ToolChoice.toMCP(map['toolChoice'] as Map<String, Object?>)
           : null,
     );
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class CreateMessageRequest extends MCP {
   String method = "sampling/createMessage";
-
-  // ignore: deprecated_member_use_from_same_package
   CreateMessageRequestParams params;
 
   CreateMessageRequest({required this.params});
@@ -4000,7 +4138,6 @@ class CreateMessageRequest extends MCP {
     return {'method': method, 'params': params.toMap()};
   }
 
-  // ignore: deprecated_member_use_from_same_package
   factory CreateMessageRequest.toMCP(Map<String, Object?> map) {
     return CreateMessageRequest(
       params: CreateMessageRequestParams.toMCP(
@@ -4010,10 +4147,6 @@ class CreateMessageRequest extends MCP {
   }
 }
 
-@Deprecated(
-  'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
-  'Remains in the specification for at least twelve months.',
-)
 class CreateMessageResult extends MCP {
   String model;
   String? stopReason;
@@ -4056,7 +4189,19 @@ class CreateMessageResult extends MCP {
 }
 
 /// Parameters for a `tools/call` request.
-class CallToolRequestParams extends InputResponseRequestParams {
+class CallToolRequestParams extends MCP {
+  /// Optional task-augmentation metadata.
+  TaskMetadata? task;
+
+  /// Optional request metadata.
+  RequestMetaObject? $meta;
+
+  /// Optional input responses (for multi-turn flows).
+  InputResponses? inputResponses;
+
+  /// Optional request state token.
+  String? requestState;
+
   /// Name of the tool to invoke.
   String name;
 
@@ -4064,9 +4209,10 @@ class CallToolRequestParams extends InputResponseRequestParams {
   Map<String, Object?>? arguments;
 
   CallToolRequestParams({
-    required super.$meta,
-    super.inputResponses,
-    super.requestState,
+    this.task,
+    this.$meta,
+    this.inputResponses,
+    this.requestState,
     required this.name,
     this.arguments,
   });
@@ -4074,7 +4220,10 @@ class CallToolRequestParams extends InputResponseRequestParams {
   @override
   Map<String, Object?> toMap() {
     return {
-      ...super.toMap(),
+      if (task != null) 'task': task!.toMap(),
+      if ($meta != null) '_meta': $meta!.toMap(),
+      if (inputResponses != null) 'inputResponses': inputResponses!.toMap(),
+      if (requestState != null) 'requestState': requestState,
       'name': name,
       if (arguments != null) 'arguments': arguments,
     };
@@ -4082,7 +4231,12 @@ class CallToolRequestParams extends InputResponseRequestParams {
 
   factory CallToolRequestParams.toMCP(Map<String, Object?> map) {
     return CallToolRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      task: map['task'] != null
+          ? TaskMetadata.toMCP(map['task'] as Map<String, Object?>)
+          : null,
+      $meta: map['_meta'] != null
+          ? RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          : null,
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
@@ -4121,12 +4275,10 @@ class CallToolRequest extends MCP {
 }
 
 /// The server's response to a `tools/call` request.
-class CallToolResult extends MapMC<String, Object?>
-    implements CallToolResultOutcome {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+class CallToolResult extends MapMC<String, Object?> {
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   List<ContentBlock> get content => (data['content'] as List<dynamic>)
       .map((e) => ContentBlock.toMCP(e as Map<String, Object?>))
       .toList();
@@ -4134,8 +4286,7 @@ class CallToolResult extends MapMC<String, Object?>
       data['structuredContent'] as Map<String, Object?>?;
   bool? get isError => data['isError'] as bool?;
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set content(List<ContentBlock> value) =>
       data['content'] = value.map((e) => e.toMap()).toList();
   set structuredContent(Map<String, Object?>? value) =>
@@ -4143,15 +4294,13 @@ class CallToolResult extends MapMC<String, Object?>
   set isError(bool? value) => data['isError'] = value;
 
   CallToolResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     required List<ContentBlock> content,
     Map<String, Object?>? structuredContent,
     bool? isError,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           'content': content.map((e) => e.toMap()).toList(),
           if (structuredContent != null) 'structuredContent': structuredContent,
           if (isError != null) 'isError': isError,
@@ -4166,9 +4315,8 @@ class CallToolResult extends MapMC<String, Object?>
   factory CallToolResult.toMCP(Map<String, Object?> map) {
     return CallToolResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       content: ((map['content'] ?? []) as List<dynamic>)
           .map((e) => ContentBlock.toMCP(e as Map<String, Object?>))
           .toList(),
@@ -4178,7 +4326,6 @@ class CallToolResult extends MapMC<String, Object?>
         ..removeWhere(
           (key, _) =>
               key == '_meta' ||
-              key == 'resultType' ||
               key == 'content' ||
               key == 'structuredContent' ||
               key == 'isError',
@@ -4190,7 +4337,7 @@ class CallToolResult extends MapMC<String, Object?>
 class CallToolResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
-  CallToolResultOutcome result;
+  CallToolResult result;
 
   CallToolResultResponse({required this.id, required this.result});
 
@@ -4202,9 +4349,7 @@ class CallToolResultResponse extends MCP {
   factory CallToolResultResponse.toMCP(Map<String, Object?> map) {
     return CallToolResultResponse(
       id: map['id']?.toString() ?? '-1',
-      result: CallToolResultOutcome.toMCP(
-        map['result'] as Map<String, Object?>,
-      ),
+      result: CallToolResult.toMCP(map['result'] as Map<String, Object?>),
     );
   }
 }
@@ -4258,40 +4403,28 @@ class ListToolsResultResponse extends MCP {
 }
 
 class ListToolsResult extends MapMC<String, Object?> {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
+  MetaObject? get $meta => data['_meta'] != null
+      ? MetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
   String? get nextCursor => data['nextCursor'] as String?;
   List<Tool> get tools => (data['tools'] as List<dynamic>)
       .map((e) => Tool.toMCP(e as Map<String, Object?>))
       .toList();
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
+  set $meta(MetaObject? value) => data['_meta'] = value?.toMap();
   set nextCursor(String? value) => data['nextCursor'] = value;
   set tools(List<Tool> value) =>
       data['tools'] = value.map((e) => e.toMap()).toList();
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
   ListToolsResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
+    MetaObject? $meta,
     String? nextCursor,
     required List<Tool> tools,
-    required num ttlMs,
-    required CacheScope cacheScope,
     Map<String, Object?>? additionalData,
   }) : super({
           if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
           if (nextCursor != null) 'nextCursor': nextCursor,
           'tools': tools.map((e) => e.toMap()).toList(),
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
           ...?additionalData,
         });
 
@@ -4303,191 +4436,16 @@ class ListToolsResult extends MapMC<String, Object?> {
   factory ListToolsResult.toMCP(Map<String, Object?> map) {
     return ListToolsResult(
       $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
+          ? MetaObject.toMCP(map['_meta'] as Map<String, Object?>)
           : null,
-      resultType: map['resultType'] as String? ?? 'complete',
       nextCursor: map['nextCursor'] as String?,
       tools: (map['tools'] as List<dynamic>)
           .map((e) => Tool.toMCP(e as Map<String, Object?>))
           .toList(),
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
       additionalData: Map.from(map)
         ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'nextCursor' ||
-              key == 'tools' ||
-              key == 'ttlMs' ||
-              key == 'cacheScope',
+          (key, _) => key == '_meta' || key == 'nextCursor' || key == 'tools',
         ),
     );
   }
-}
-
-// ── server/discover ──────────────────────────────────────────────────────────
-
-/// Requests the server's capability advertisement out-of-band, replacing
-/// the former `initialize` handshake now that protocol negotiation happens
-/// per-request via [RequestMetaObject].
-class DiscoverRequest extends MCP {
-  String jsonrpc = "2.0";
-  String id;
-  String method = "server/discover";
-  RequestParams params;
-
-  DiscoverRequest({required this.id, required this.params});
-
-  @override
-  Map<String, Object?> toMap() {
-    return {
-      'jsonrpc': jsonrpc,
-      'id': id,
-      'method': method,
-      'params': params.toMap(),
-    };
-  }
-
-  factory DiscoverRequest.toMCP(Map<String, Object?> map) {
-    return DiscoverRequest(
-      id: map['id']?.toString() ?? '-1',
-      params: RequestParams.toMCP(map['params'] as Map<String, Object?>),
-    );
-  }
-}
-
-class DiscoverResultResponse extends MCP {
-  String jsonrpc = "2.0";
-  String id;
-  DiscoverResult result;
-
-  DiscoverResultResponse({required this.id, required this.result});
-
-  @override
-  Map<String, Object?> toMap() {
-    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
-  }
-
-  factory DiscoverResultResponse.toMCP(Map<String, Object?> map) {
-    return DiscoverResultResponse(
-      id: map['id']?.toString() ?? '-1',
-      result: DiscoverResult.toMCP(map['result'] as Map<String, Object?>),
-    );
-  }
-}
-
-/// The server's capability advertisement, servers implementing this
-/// protocol version MUST support `server/discover`.
-class DiscoverResult extends MapMC<String, Object?> {
-  ResultMetaObject? get $meta => data['_meta'] != null
-      ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
-      : null;
-  String get resultType => data['resultType'] as String? ?? 'complete';
-  List<String> get supportedVersions =>
-      (data['supportedVersions'] as List<dynamic>).cast<String>();
-  ServerCapabilities get capabilities =>
-      ServerCapabilities.toMCP(data['capabilities'] as Map<String, Object?>);
-  String? get instructions => data['instructions'] as String?;
-  num get ttlMs => data['ttlMs'] as num;
-  CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
-
-  set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
-  set resultType(String value) => data['resultType'] = value;
-  set supportedVersions(List<String> value) =>
-      data['supportedVersions'] = value;
-  set capabilities(ServerCapabilities value) =>
-      data['capabilities'] = value.toMap();
-  set instructions(String? value) => data['instructions'] = value;
-  set ttlMs(num value) => data['ttlMs'] = value;
-  set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
-
-  DiscoverResult({
-    ResultMetaObject? $meta,
-    String resultType = 'complete',
-    required List<String> supportedVersions,
-    required ServerCapabilities capabilities,
-    String? instructions,
-    required num ttlMs,
-    required CacheScope cacheScope,
-    Map<String, Object?>? additionalData,
-  }) : super({
-          if ($meta != null) '_meta': $meta.toMap(),
-          'resultType': resultType,
-          'supportedVersions': supportedVersions,
-          'capabilities': capabilities.toMap(),
-          if (instructions != null) 'instructions': instructions,
-          'ttlMs': ttlMs,
-          'cacheScope': cacheScope.toString(),
-          ...?additionalData,
-        });
-
-  @override
-  Map<String, Object?> toMap() {
-    return data;
-  }
-
-  factory DiscoverResult.toMCP(Map<String, Object?> map) {
-    return DiscoverResult(
-      $meta: map['_meta'] != null
-          ? ResultMetaObject.toMCP(map['_meta'] as Map<String, Object?>)
-          : null,
-      resultType: map['resultType'] as String? ?? 'complete',
-      supportedVersions:
-          (map['supportedVersions'] as List<dynamic>).cast<String>(),
-      capabilities: ServerCapabilities.toMCP(
-        map['capabilities'] as Map<String, Object?>,
-      ),
-      instructions: map['instructions'] as String?,
-      ttlMs: map['ttlMs'] as num,
-      cacheScope: CacheScope.to(map['cacheScope'] as String),
-      additionalData: Map.from(map)
-        ..removeWhere(
-          (key, _) =>
-              key == '_meta' ||
-              key == 'resultType' ||
-              key == 'supportedVersions' ||
-              key == 'capabilities' ||
-              key == 'instructions' ||
-              key == 'ttlMs' ||
-              key == 'cacheScope',
-        ),
-    );
-  }
-}
-
-// ── New protocol-level errors (2026-07-28) ───────────────────────────────────
-
-/// Returned when a server rejects a request because HTTP header values do
-/// not match the corresponding values in the request body, or required
-/// headers are missing/malformed. For HTTP, the response status MUST be
-/// `400 Bad Request`.
-class HeaderMismatchError extends Error {
-  HeaderMismatchError({required super.message, super.data})
-      : super(code: -32020);
-}
-
-/// Returned when a request omits a client capability the server requires
-/// for the requested operation.
-class MissingRequiredClientCapabilityError extends Error {
-  MissingRequiredClientCapabilityError({
-    required super.message,
-    required ClientCapabilities requiredCapabilities,
-  }) : super(
-          code: -32021,
-          data: {'requiredCapabilities': requiredCapabilities.toMap()},
-        );
-}
-
-/// Returned when a server does not support the protocol version requested
-/// via `RequestMetaObject["io.modelcontextprotocol/protocolVersion"]`.
-class UnsupportedProtocolVersionError extends Error {
-  UnsupportedProtocolVersionError({
-    required super.message,
-    required List<String> supported,
-    required String requested,
-  }) : super(
-          code: -32022,
-          data: {'supported': supported, 'requested': requested},
-        );
 }

@@ -1,5 +1,5 @@
 // ignore_for_file: avoid_print
-import 'package:mcp_models/mcp_models_2026_07_28.dart';
+import 'package:mcp_models/mcp_models_v2026.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // This example demonstrates the key workflows exposed by mcp_models under the

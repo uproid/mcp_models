@@ -1,4 +1,4 @@
-import 'package:mcp_models/mcp_models_2025_11_25.dart';
+import 'package:mcp_models/mcp_models_v2025.dart';
 import 'package:test/test.dart';
 
 void main() {

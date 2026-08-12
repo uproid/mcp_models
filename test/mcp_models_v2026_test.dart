@@ -1,4 +1,4 @@
-import 'package:mcp_models/mcp_models_2026_07_28.dart';
+import 'package:mcp_models/mcp_models_v2026.dart';
 import 'package:test/test.dart';
 
 RequestMetaObject _meta({String? progressToken}) => RequestMetaObject(
