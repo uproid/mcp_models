@@ -1,3 +1,5 @@
+## 2.1.0-dev.2
+- improve package with all versions
 ## 2.0.0
 Full migration to the [MCP 2026-07-28 schema](https://modelcontextprotocol.io/specification/2026-07-28/schema). This is a breaking release — no backward-compatible shim is provided.
 

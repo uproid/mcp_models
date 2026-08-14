@@ -1,19 +1,14 @@
-import 'package:mcp_models/mcp_models.dart';
-import 'package:mcp_models/src/map_model.dart';
-
-/// Base interface for all MCP model objects.
-///
-/// Every concrete MCP type must implement [toMap] to produce a
-/// JSON-serialisable `Map<String, Object?>`.
-abstract interface class MCP {
-  Map<String, Object?> toMap();
-}
+import '../mcp.dart';
+import '../v2026/enums.dart';
+import '../v2026/types.dart';
+import '../map_model.dart';
 
 /// A [MapModel] that also satisfies [MCP].
 ///
 /// Use as the base class when the model _is_ the underlying map
 /// (e.g. [DiscoverResult], [ClientCapabilities]).
 abstract class MapMC<K, V> extends MapModel<K, V> implements MCP {
+  /// Creates a [MapMC].
   MapMC(super.data);
 }
 
@@ -30,13 +25,16 @@ class JSONRPCErrorResponse extends JSONRPCMessage {
   /// The structured error payload.
   Error error;
 
+  /// Creates a [JSONRPCErrorResponse].
   JSONRPCErrorResponse({this.jsonrpc = '2.0', this.id, required this.error});
 
+  /// Converts this [JSONRPCErrorResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'error': error.toMap()};
   }
 
+  /// Builds a [JSONRPCErrorResponse] from a decoded MCP JSON map.
   factory JSONRPCErrorResponse.toMCP(Map<String, Object?> map) {
     return JSONRPCErrorResponse(
       jsonrpc: map['jsonrpc']?.toString() ?? '2.0',
@@ -57,13 +55,16 @@ class Error extends MCP {
   /// Optional additional error data (provider-defined).
   Object? data;
 
+  /// Creates an [Error].
   Error({required this.code, required this.message, this.data});
 
+  /// Converts this [Error] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'code': code, 'message': message, 'data': data};
   }
 
+  /// Builds an [Error] from a decoded MCP JSON map.
   factory Error.toMCP(Map<String, Object?> map) {
     return Error(
       code: map['code'] as int,
@@ -87,17 +88,20 @@ class JSONRPCNotification extends JSONRPCMessage {
   /// Optional notification parameters.
   Map<String, Object?>? params;
 
+  /// Creates a [JSONRPCNotification].
   JSONRPCNotification({
     this.jsonrpc = '2.0',
     required this.method,
     this.params,
   });
 
+  /// Converts this [JSONRPCNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params};
   }
 
+  /// Builds a [JSONRPCNotification] from a decoded MCP JSON map.
   factory JSONRPCNotification.toMCP(Map<String, Object?> map) {
     return JSONRPCNotification(
       jsonrpc: map['jsonrpc'] as String,
@@ -121,13 +125,16 @@ class JSONRPCResultResponse extends JSONRPCResponse {
   /// The result payload.
   Result result;
 
+  /// Creates a [JSONRPCResultResponse].
   JSONRPCResultResponse({this.jsonrpc = '2.0', this.id, required this.result});
 
+  /// Converts this [JSONRPCResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [JSONRPCResultResponse] from a decoded MCP JSON map.
   factory JSONRPCResultResponse.toMCP(Map<String, Object?> map) {
     return JSONRPCResultResponse(
       jsonrpc: map['jsonrpc'] as String,
@@ -157,8 +164,10 @@ class Result extends MCP {
   /// Any additional unknown fields returned by the server.
   Map<String, Object?>? unknown;
 
+  /// Creates a [Result].
   Result({this.$meta, this.resultType = 'complete', this.unknown});
 
+  /// Converts this [Result] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -168,6 +177,7 @@ class Result extends MCP {
     };
   }
 
+  /// Builds a [Result] from a decoded MCP JSON map.
   factory Result.toMCP(Map<String, Object?> map) {
     return Result(
       $meta: map['_meta'] != null
@@ -185,6 +195,7 @@ class Result extends MCP {
 /// May contain `"io.modelcontextprotocol/serverInfo"`, plus arbitrary
 /// server-defined passthrough keys.
 class ResultMetaObject extends MapMC<String, Object?> {
+  /// Creates a [ResultMetaObject].
   ResultMetaObject({
     Implementation? serverInfo,
     Map<String, Object?>? additionalData,
@@ -206,9 +217,11 @@ class ResultMetaObject extends MapMC<String, Object?> {
   set serverInfo(Implementation? value) =>
       data['io.modelcontextprotocol/serverInfo'] = value?.toMap();
 
+  /// Converts this [ResultMetaObject] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() => data;
 
+  /// Builds a [ResultMetaObject] from a decoded MCP JSON map.
   factory ResultMetaObject.toMCP(Map<String, Object?> map) {
     return ResultMetaObject(additionalData: map);
   }
@@ -219,6 +232,7 @@ class ResultMetaObject extends MapMC<String, Object?> {
 /// May contain `"io.modelcontextprotocol/subscriptionId"`, plus arbitrary
 /// notification-defined passthrough keys.
 class NotificationMetaObject extends MapMC<String, Object?> {
+  /// Creates a [NotificationMetaObject].
   NotificationMetaObject({
     String? subscriptionId,
     Map<String, Object?>? additionalData,
@@ -237,9 +251,11 @@ class NotificationMetaObject extends MapMC<String, Object?> {
   set subscriptionId(String? value) =>
       data['io.modelcontextprotocol/subscriptionId'] = value;
 
+  /// Converts this [NotificationMetaObject] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() => data;
 
+  /// Builds a [NotificationMetaObject] from a decoded MCP JSON map.
   factory NotificationMetaObject.toMCP(Map<String, Object?> map) {
     return NotificationMetaObject(additionalData: map);
   }
@@ -277,6 +293,7 @@ class InputRequiredResult extends MapMC<String, Object?>
 
   set requestState(String? value) => data['requestState'] = value;
 
+  /// Creates an [InputRequiredResult].
   InputRequiredResult({
     ResultMetaObject? $meta,
     InputRequests? inputRequests,
@@ -290,9 +307,11 @@ class InputRequiredResult extends MapMC<String, Object?>
           ...?additionalData,
         });
 
+  /// Converts this [InputRequiredResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() => data;
 
+  /// Builds an [InputRequiredResult] from a decoded MCP JSON map.
   factory InputRequiredResult.toMCP(Map<String, Object?> map) {
     return InputRequiredResult(
       $meta: map['_meta'] != null
@@ -315,6 +334,7 @@ class InputRequiredResult extends MapMC<String, Object?>
 /// Discriminated union: either an [InputRequiredResult] pause or the
 /// completed [CallToolResult], as returned by `CallToolResultResponse.result`.
 abstract class CallToolResultOutcome implements MCP {
+  /// Builds a [CallToolResultOutcome] from a decoded MCP JSON map.
   factory CallToolResultOutcome.toMCP(Map<String, Object?> map) {
     if (map['resultType'] == 'input_required') {
       return InputRequiredResult.toMCP(map);
@@ -326,6 +346,7 @@ abstract class CallToolResultOutcome implements MCP {
 /// Discriminated union: either an [InputRequiredResult] pause or the
 /// completed [GetPromptResult], as returned by `GetPromptResultResponse.result`.
 abstract class GetPromptResultOutcome implements MCP {
+  /// Builds a [GetPromptResultOutcome] from a decoded MCP JSON map.
   factory GetPromptResultOutcome.toMCP(Map<String, Object?> map) {
     if (map['resultType'] == 'input_required') {
       return InputRequiredResult.toMCP(map);
@@ -338,6 +359,7 @@ abstract class GetPromptResultOutcome implements MCP {
 /// completed [ReadResourceResult], as returned by
 /// `ReadResourceResultResponse.result`.
 abstract class ReadResourceResultOutcome implements MCP {
+  /// Builds a [ReadResourceResultOutcome] from a decoded MCP JSON map.
   factory ReadResourceResultOutcome.toMCP(Map<String, Object?> map) {
     if (map['resultType'] == 'input_required') {
       return InputRequiredResult.toMCP(map);
@@ -349,13 +371,17 @@ abstract class ReadResourceResultOutcome implements MCP {
 /// Holds the `_meta` map present on many MCP types.
 class MetaObject extends MCP {
   Map<String, Object?> _data;
+
+  /// Creates a [MetaObject].
   MetaObject(this._data);
 
+  /// Converts this [MetaObject] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return _data;
   }
 
+  /// Builds a [MetaObject] from a decoded MCP JSON map.
   factory MetaObject.toMCP(Map<String, Object?> map) {
     return MetaObject(map);
   }
@@ -375,6 +401,7 @@ class JSONRPCRequest extends MCP {
   /// Unique request identifier.
   String id;
 
+  /// Creates a [JSONRPCRequest].
   JSONRPCRequest({
     this.jsonrpc = '2.0',
     required this.method,
@@ -382,11 +409,13 @@ class JSONRPCRequest extends MCP {
     required this.id,
   });
 
+  /// Converts this [JSONRPCRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params, 'id': id};
   }
 
+  /// Builds a [JSONRPCRequest] from a decoded MCP JSON map.
   factory JSONRPCRequest.toMCP(Map<String, Object?> map) {
     return JSONRPCRequest(
       jsonrpc: map['jsonrpc'] as String,
@@ -410,8 +439,10 @@ class Annotations extends MCP {
   /// Intended audience roles for this content.
   List<Role>? audience;
 
+  /// Creates an [Annotations].
   Annotations({this.priority, this.lastModified, this.audience});
 
+  /// Converts this [Annotations] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -422,6 +453,7 @@ class Annotations extends MCP {
     };
   }
 
+  /// Builds an [Annotations] from a decoded MCP JSON map.
   factory Annotations.toMCP(Map<String, Object?> map) {
     return Annotations(
       priority: map['priority'] as int?,
@@ -437,6 +469,7 @@ class Annotations extends MCP {
 
 /// A successful result that carries no data.
 class EmptyResult extends Result {
+  /// Creates an [EmptyResult].
   EmptyResult({super.$meta, super.resultType = 'complete'});
 }
 
@@ -454,7 +487,10 @@ class Icon extends MCP {
   /// Theme the icon is designed for.
   Theme? theme;
 
+  /// Creates an [Icon].
   Icon({required this.src, this.mimeType, this.sizes, this.theme});
+
+  /// Converts this [Icon] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -465,6 +501,7 @@ class Icon extends MCP {
     };
   }
 
+  /// Builds an [Icon] from a decoded MCP JSON map.
   factory Icon.toMCP(Map<String, Object?> map) {
     return Icon(
       src: map['src'] as String,
@@ -480,13 +517,16 @@ class NotificationParams extends MCP {
   /// Optional notification metadata.
   NotificationMetaObject? $meta;
 
+  /// Creates a [NotificationParams].
   NotificationParams({this.$meta});
 
+  /// Converts this [NotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {if ($meta != null) '_meta': $meta!.toMap()};
   }
 
+  /// Builds a [NotificationParams] from a decoded MCP JSON map.
   factory NotificationParams.toMCP(Map<String, Object?> map) {
     return NotificationParams(
       $meta: map['_meta'] != null
@@ -502,6 +542,7 @@ class NotificationParams extends MCP {
 /// [protocolVersion] and [clientCapabilities] are required on every request
 /// rather than negotiated once via an `initialize` handshake.
 class RequestMetaObject extends MapMC<String, Object?> {
+  /// Creates a [RequestMetaObject].
   RequestMetaObject({
     String? progressToken,
     required String protocolVersion,
@@ -563,10 +604,9 @@ class RequestMetaObject extends MapMC<String, Object?> {
     'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
     'Remains in the specification for at least twelve months.',
   )
-  LoggingLevel? get logLevel =>
-      data['io.modelcontextprotocol/logLevel'] != null
-          ? LoggingLevel.to(data['io.modelcontextprotocol/logLevel'] as String)
-          : null;
+  LoggingLevel? get logLevel => data['io.modelcontextprotocol/logLevel'] != null
+      ? LoggingLevel.to(data['io.modelcontextprotocol/logLevel'] as String)
+      : null;
 
   @Deprecated(
     'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
@@ -575,24 +615,27 @@ class RequestMetaObject extends MapMC<String, Object?> {
   set logLevel(LoggingLevel? value) =>
       data['io.modelcontextprotocol/logLevel'] = value?.toString();
 
+  /// Converts this [RequestMetaObject] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [RequestMetaObject] from a decoded MCP JSON map.
   factory RequestMetaObject.toMCP(Map<String, Object?> map) {
     return RequestMetaObject(
       progressToken: map['progressToken']?.toString(),
       protocolVersion:
-          map['io.modelcontextprotocol/protocolVersion'] as String,
+          map['io.modelcontextprotocol/protocolVersion'] as String? ??
+              '2025-11-25',
       clientCapabilities: ClientCapabilities.toMCP(
         map['io.modelcontextprotocol/clientCapabilities']
-            as Map<String, Object?>,
+                as Map<String, Object?>? ??
+            <String, Object?>{},
       ),
       clientInfo: map['io.modelcontextprotocol/clientInfo'] != null
           ? Implementation.toMCP(
-              map['io.modelcontextprotocol/clientInfo']
-                  as Map<String, Object?>,
+              map['io.modelcontextprotocol/clientInfo'] as Map<String, Object?>,
             )
           : null,
       // ignore: deprecated_member_use_from_same_package
@@ -620,8 +663,10 @@ class PaginatedRequestParams extends MCP {
   /// Request metadata (required — carries protocol version & capabilities).
   RequestMetaObject $meta;
 
+  /// Creates a [PaginatedRequestParams].
   PaginatedRequestParams({this.cursor, required this.$meta});
 
+  /// Converts this [PaginatedRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -630,10 +675,12 @@ class PaginatedRequestParams extends MCP {
     };
   }
 
+  /// Builds a [PaginatedRequestParams] from a decoded MCP JSON map.
   factory PaginatedRequestParams.toMCP(Map<String, Object?> map) {
     return PaginatedRequestParams(
       cursor: map['cursor'] as String?,
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
     );
   }
 }
@@ -653,12 +700,14 @@ class InputResponseRequestParams extends MCP {
   /// Opaque state token echoed back from a prior [InputRequiredResult].
   String? requestState;
 
+  /// Creates an [InputResponseRequestParams].
   InputResponseRequestParams({
     required this.$meta,
     this.inputResponses,
     this.requestState,
   });
 
+  /// Converts this [InputResponseRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -668,9 +717,11 @@ class InputResponseRequestParams extends MCP {
     };
   }
 
+  /// Builds an [InputResponseRequestParams] from a decoded MCP JSON map.
   factory InputResponseRequestParams.toMCP(Map<String, Object?> map) {
     return InputResponseRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
     );
@@ -679,29 +730,34 @@ class InputResponseRequestParams extends MCP {
 
 /// JSON-RPC internal error (code -32603).
 class InternalError extends Error {
+  /// Creates an [InternalError].
   InternalError({required super.message, super.data}) : super(code: -32603);
 }
 
 /// JSON-RPC invalid params error (code -32602).
 class InvalidParamsError extends Error {
+  /// Creates an [InvalidParamsError].
   InvalidParamsError({required super.message, super.data})
       : super(code: -32602);
 }
 
 /// JSON-RPC invalid request error (code -32600).
 class InvalidRequestError extends Error {
+  /// Creates an [InvalidRequestError].
   InvalidRequestError({required super.message, super.data})
       : super(code: -32600);
 }
 
 /// JSON-RPC method not found error (code -32601).
 class MethodNotFoundError extends Error {
+  /// Creates a [MethodNotFoundError].
   MethodNotFoundError({required super.message, super.data})
       : super(code: -32601);
 }
 
 /// JSON-RPC parse error (code -32700).
 class ParseError extends Error {
+  /// Creates a [ParseError].
   ParseError({required super.message, super.data}) : super(code: -32700);
 }
 
@@ -722,6 +778,7 @@ class ContentBlock extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
 
+  /// Creates a [ContentBlock].
   ContentBlock({
     required this.type,
     required this.data,
@@ -730,6 +787,7 @@ class ContentBlock extends MCP {
     this.$meta,
   });
 
+  /// Converts this [ContentBlock] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -741,6 +799,7 @@ class ContentBlock extends MCP {
     };
   }
 
+  /// Builds a [ContentBlock] from a decoded MCP JSON map.
   factory ContentBlock.toMCP(Map<String, Object?> map) {
     if (map['type'] == 'text') {
       return TextContent.toMCP(map);
@@ -774,6 +833,7 @@ class AudioContent extends ContentBlock
     // ignore: deprecated_member_use_from_same_package
     implements
         SamplingMessageContentBlock {
+  /// Creates an [AudioContent].
   AudioContent({
     required super.data,
     required super.mimeType,
@@ -781,11 +841,13 @@ class AudioContent extends ContentBlock
     super.$meta,
   }) : super(type: 'audio');
 
+  /// Converts this [AudioContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap()};
   }
 
+  /// Builds an [AudioContent] from a decoded MCP JSON map.
   factory AudioContent.toMCP(Map<String, Object?> map) {
     return AudioContent(
       data: map['data'] as String,
@@ -813,6 +875,7 @@ interface class ResourceContents extends MCP {
 
   ResourceContents({required this.uri, this.mimeType, this.$meta});
 
+  /// Converts this [AudioContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -822,6 +885,7 @@ interface class ResourceContents extends MCP {
     };
   }
 
+  /// Builds a [ResourceContents] from a decoded MCP JSON map.
   factory ResourceContents.toMCP(Map<String, Object?> map) {
     if (map['text'] != null) {
       return TextResourceContents.toMCP(map);
@@ -842,6 +906,8 @@ interface class ResourceContents extends MCP {
 class BlobResourceContents extends ResourceContents {
   /// Base64-encoded binary content.
   String blob;
+
+  /// Creates a [BlobResourceContents].
   BlobResourceContents({
     required this.blob,
     required super.uri,
@@ -849,11 +915,13 @@ class BlobResourceContents extends ResourceContents {
     super.$meta,
   });
 
+  /// Converts this [BlobResourceContents] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'blob': blob};
   }
 
+  /// Builds a [BlobResourceContents] from a decoded MCP JSON map.
   factory BlobResourceContents.toMCP(Map<String, Object?> map) {
     return BlobResourceContents(
       blob: map['blob'] as String,
@@ -871,6 +939,7 @@ class EmbeddedResource extends ContentBlock {
   /// The embedded resource contents.
   ResourceContents resource;
 
+  /// Creates an [EmbeddedResource].
   EmbeddedResource({
     required this.resource,
     required super.data,
@@ -879,11 +948,13 @@ class EmbeddedResource extends ContentBlock {
     super.$meta,
   }) : super(type: 'resource');
 
+  /// Converts this [EmbeddedResource] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'resource': resource.toMap()};
   }
 
+  /// Builds an [EmbeddedResource] from a decoded MCP JSON map.
   factory EmbeddedResource.toMCP(Map<String, Object?> map) {
     return EmbeddedResource(
       resource: ResourceContents.toMCP(map['resource'] as Map<String, Object?>),
@@ -906,6 +977,7 @@ class ImageContent extends ContentBlock
     // ignore: deprecated_member_use_from_same_package
     implements
         SamplingMessageContentBlock {
+  /// Creates an [ImageContent].
   ImageContent({
     required super.data,
     required super.mimeType,
@@ -913,11 +985,13 @@ class ImageContent extends ContentBlock
     super.$meta,
   }) : super(type: 'image');
 
+  /// Converts this [ImageContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap()};
   }
 
+  /// Builds an [ImageContent] from a decoded MCP JSON map.
   factory ImageContent.toMCP(Map<String, Object?> map) {
     return ImageContent(
       data: map['data'] as String,
@@ -954,6 +1028,7 @@ class ResourceLink extends ContentBlock {
   /// Size of the raw resource in bytes, if known.
   int? size;
 
+  /// Creates a [ResourceLink].
   ResourceLink({
     this.icons,
     required this.name,
@@ -967,6 +1042,7 @@ class ResourceLink extends ContentBlock {
     super.$meta,
   }) : super(type: 'resource_link');
 
+  /// Converts this [ResourceLink] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -980,6 +1056,7 @@ class ResourceLink extends ContentBlock {
     };
   }
 
+  /// Builds a [ResourceLink] from a decoded MCP JSON map.
   factory ResourceLink.toMCP(Map<String, Object?> map) {
     return ResourceLink(
       icons: map['icons'] != null
@@ -1012,6 +1089,7 @@ class TextContent extends ContentBlock
   /// The text payload.
   String text;
 
+  /// Creates a [TextContent].
   TextContent({
     required this.text,
     required super.mimeType,
@@ -1019,11 +1097,13 @@ class TextContent extends ContentBlock
     super.$meta,
   }) : super(type: 'text', data: '');
 
+  /// Converts this [TextContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'text': text};
   }
 
+  /// Builds a [TextContent] from a decoded MCP JSON map.
   factory TextContent.toMCP(Map<String, Object?> map) {
     return TextContent(
       text: map['text'] as String,
@@ -1043,6 +1123,7 @@ class TextResourceContents extends ResourceContents {
   /// The text payload.
   String text;
 
+  /// Creates a [TextResourceContents].
   TextResourceContents({
     required this.text,
     required super.uri,
@@ -1050,11 +1131,13 @@ class TextResourceContents extends ResourceContents {
     super.$meta,
   });
 
+  /// Converts this [TextResourceContents] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'text': text};
   }
 
+  /// Builds a [TextResourceContents] from a decoded MCP JSON map.
   factory TextResourceContents.toMCP(Map<String, Object?> map) {
     return TextResourceContents(
       text: map['text'] as String,
@@ -1067,17 +1150,21 @@ class TextResourceContents extends ResourceContents {
   }
 }
 
+/// The MCP `CompleteRequestParamsArgument` schema type.
 class CompleteRequestParamsArgument extends MCP {
   String name;
   String value;
 
+  /// Creates a [CompleteRequestParamsArgument].
   CompleteRequestParamsArgument({required this.name, required this.value});
 
+  /// Converts this [CompleteRequestParamsArgument] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'name': name, 'value': value};
   }
 
+  /// Builds a [CompleteRequestParamsArgument] from a decoded MCP JSON map.
   factory CompleteRequestParamsArgument.toMCP(Map<String, Object?> map) {
     return CompleteRequestParamsArgument(
       name: map['name'] as String,
@@ -1086,16 +1173,20 @@ class CompleteRequestParamsArgument extends MCP {
   }
 }
 
+/// The MCP `CompleteRequestParamsContext` schema type.
 class CompleteRequestParamsContext extends MCP {
   Map<String, String>? arguments;
 
+  /// Creates a [CompleteRequestParamsContext].
   CompleteRequestParamsContext({this.arguments});
 
+  /// Converts this [CompleteRequestParamsContext] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'arguments': arguments};
   }
 
+  /// Builds a [CompleteRequestParamsContext] from a decoded MCP JSON map.
   factory CompleteRequestParamsContext.toMCP(Map<String, Object?> map) {
     return CompleteRequestParamsContext(
       arguments:
@@ -1104,12 +1195,18 @@ class CompleteRequestParamsContext extends MCP {
   }
 }
 
+/// Parameters for a completion/complete request.
 class CompleteRequestParams extends MCP {
   RequestMetaObject $meta;
   Reference ref;
+
+  /// The argument's information
   CompleteRequestParamsArgument argument;
+
+  /// Additional, optional context for completions
   CompleteRequestParamsContext? context;
 
+  /// Creates a [CompleteRequestParams].
   CompleteRequestParams({
     required this.$meta,
     required this.ref,
@@ -1117,6 +1214,7 @@ class CompleteRequestParams extends MCP {
     this.context,
   });
 
+  /// Converts this [CompleteRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1127,9 +1225,11 @@ class CompleteRequestParams extends MCP {
     };
   }
 
+  /// Builds a [CompleteRequestParams] from a decoded MCP JSON map.
   factory CompleteRequestParams.toMCP(Map<String, Object?> map) {
     return CompleteRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       ref: Reference.toMCP(map['ref'] as Map<String, Object?>),
       argument: CompleteRequestParamsArgument.toMCP(
         map['argument'] as Map<String, Object?>,
@@ -1147,8 +1247,10 @@ class CompleteRequestParams extends MCP {
 /// [PromptReference] (`type: "ref/prompt"`) or a [ResourceTemplateReference]
 /// (`type: "ref/resource"`).
 abstract class Reference extends MCP {
+  /// Creates a [Reference].
   Reference();
 
+  /// Builds a [Reference] from a decoded MCP JSON map.
   factory Reference.toMCP(Map<String, Object?> map) {
     if (map['type'] == 'ref/resource') {
       return ResourceTemplateReference.toMCP(map);
@@ -1157,17 +1259,25 @@ abstract class Reference extends MCP {
   }
 }
 
+/// Identifies a prompt.
 class PromptReference extends Reference {
+  /// Intended for programmatic or logical use, but used as a display name in past specs or fallback (if title isn't present).
   String name;
+
+  /// Intended for UI and end-user contexts — optimized to be human-readable and easily understood, even by those unfamiliar with domain-specific terminology.
   String? title;
   String type = 'ref/prompt';
 
+  /// Creates a [PromptReference].
   PromptReference({required this.name, this.title});
+
+  /// Converts this [PromptReference] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'name': name, if (title != null) 'title': title, 'type': type};
   }
 
+  /// Builds a [PromptReference] from a decoded MCP JSON map.
   factory PromptReference.toMCP(Map<String, Object?> map) {
     return PromptReference(
       name: map['name'] as String,
@@ -1176,32 +1286,41 @@ class PromptReference extends Reference {
   }
 }
 
+/// A reference to a resource or resource template definition.
 class ResourceTemplateReference extends Reference {
   /// Discriminator. Note this is `"ref/resource"`, shared with plain
   /// resource references — not `"ref/resource_template"`.
   String type = 'ref/resource';
+
+  /// The URI or URI template of the resource.
   String uri;
 
+  /// Creates a [ResourceTemplateReference].
   ResourceTemplateReference({required this.uri});
 
+  /// Converts this [ResourceTemplateReference] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'type': type, 'uri': uri};
   }
 
+  /// Builds a [ResourceTemplateReference] from a decoded MCP JSON map.
   factory ResourceTemplateReference.toMCP(Map<String, Object?> map) {
     return ResourceTemplateReference(uri: map['uri'] as String);
   }
 }
 
+/// A request from the client to the server, to ask for completion options.
 class CompleteRequest extends MCP {
   String id;
   CompleteRequestParams params;
   String jsonrpc = '2.0';
   String method = 'completion/complete';
 
+  /// Creates a [CompleteRequest].
   CompleteRequest({required this.id, required this.params});
 
+  /// Converts this [CompleteRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1212,6 +1331,7 @@ class CompleteRequest extends MCP {
     };
   }
 
+  /// Builds a [CompleteRequest] from a decoded MCP JSON map.
   factory CompleteRequest.toMCP(Map<String, Object?> map) {
     return CompleteRequest(
       id: map['id']?.toString() ?? '-1',
@@ -1222,18 +1342,22 @@ class CompleteRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a completion/complete request.
 class CompleteResultResponse extends MCP {
   String jsonrpc = '2.0';
   String id;
   CompleteResult result;
 
+  /// Creates a [CompleteResultResponse].
   CompleteResultResponse({required this.id, required this.result});
 
+  /// Converts this [CompleteResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [CompleteResultResponse] from a decoded MCP JSON map.
   factory CompleteResultResponse.toMCP(Map<String, Object?> map) {
     return CompleteResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -1242,11 +1366,17 @@ class CompleteResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a completion/complete request.
 class CompleteResult extends MapMC<String, Object?> {
   ResultMetaObject? $meta;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String resultType;
+
+  /// An array of completion values.
   CompleteResultCompletion completion;
 
+  /// Creates a [CompleteResult].
   CompleteResult({
     this.$meta,
     this.resultType = 'complete',
@@ -1254,6 +1384,7 @@ class CompleteResult extends MapMC<String, Object?> {
     Map<String, Object?>? additionalData,
   }) : super(additionalData ?? {});
 
+  /// Converts this [CompleteResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1264,6 +1395,7 @@ class CompleteResult extends MapMC<String, Object?> {
     };
   }
 
+  /// Builds a [CompleteResult] from a decoded MCP JSON map.
   factory CompleteResult.toMCP(Map<String, Object?> map) {
     return CompleteResult(
       $meta: map['_meta'] != null
@@ -1282,14 +1414,17 @@ class CompleteResult extends MapMC<String, Object?> {
   }
 }
 
+/// The MCP `CompleteResultCompletion` schema type.
 class CompleteResultCompletion extends MCP {
   /// Completion values. Must not exceed 100 items.
   List<String> values;
   int? total;
   bool? hasMore;
 
+  /// Creates a [CompleteResultCompletion].
   CompleteResultCompletion({required this.values, this.total, this.hasMore});
 
+  /// Converts this [CompleteResultCompletion] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1299,6 +1434,7 @@ class CompleteResultCompletion extends MCP {
     };
   }
 
+  /// Builds a [CompleteResultCompletion] from a decoded MCP JSON map.
   factory CompleteResultCompletion.toMCP(Map<String, Object?> map) {
     return CompleteResultCompletion(
       values: (map['values'] as List<dynamic>).cast<String>(),
@@ -1308,14 +1444,17 @@ class CompleteResultCompletion extends MCP {
   }
 }
 
+/// A request from the server to elicit additional information from the user via the client.
 class ElicitRequest extends MCP {
   String id;
   ElicitRequestParams params;
   String jsonrpc = '2.0';
   String method = 'elicitation/create';
 
+  /// Creates an [ElicitRequest].
   ElicitRequest({required this.id, required this.params});
 
+  /// Converts this [ElicitRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1326,6 +1465,7 @@ class ElicitRequest extends MCP {
     };
   }
 
+  /// Builds an [ElicitRequest] from a decoded MCP JSON map.
   factory ElicitRequest.toMCP(Map<String, Object?> map) {
     return ElicitRequest(
       id: map['id']?.toString() ?? '-1',
@@ -1338,8 +1478,10 @@ class ElicitRequest extends MCP {
 /// on [ElicitRequestFormParams.mode] / [ElicitRequestURLParams.mode]:
 /// a form-based elicitation, or a URL-based one.
 abstract class ElicitRequestParams extends MCP {
+  /// Creates an [ElicitRequestParams].
   ElicitRequestParams();
 
+  /// Builds an [ElicitRequestParams] from a decoded MCP JSON map.
   factory ElicitRequestParams.toMCP(Map<String, Object?> map) {
     if (map['mode'] == 'url') {
       return ElicitRequestURLParams.toMCP(map);
@@ -1348,14 +1490,21 @@ abstract class ElicitRequestParams extends MCP {
   }
 }
 
+/// The result returned by the client for an elicitation/create request.
 class ElicitResult extends MapMC<String, Object?> {
   MetaObject? $meta;
+
+  /// The user action in response to the elicitation.
   ActionType action;
+
+  /// The submitted form data, only present when action is "accept" and mode was "form".
   Map<String, Object?> content;
 
+  /// Creates an [ElicitResult].
   ElicitResult({this.$meta, required this.action, required this.content})
       : super({});
 
+  /// Converts this [ElicitResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1366,6 +1515,7 @@ class ElicitResult extends MapMC<String, Object?> {
     };
   }
 
+  /// Builds an [ElicitResult] from a decoded MCP JSON map.
   factory ElicitResult.toMCP(Map<String, Object?> map) {
     return ElicitResult(
       $meta: map['_meta'] != null
@@ -1383,14 +1533,17 @@ class ElicitResult extends MapMC<String, Object?> {
   }
 }
 
+/// The MCP `Schema` schema type.
 class Schema<T> extends MCP {
   String type;
   String? title;
   String? description;
   T? defaultValue;
 
+  /// Creates a [Schema].
   Schema({required this.type, this.title, this.description, this.defaultValue});
 
+  /// Converts this [Schema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1401,6 +1554,7 @@ class Schema<T> extends MCP {
     };
   }
 
+  /// Builds a [Schema] from a decoded MCP JSON map.
   factory Schema.toMCP(Map<String, Object?> map) {
     return Schema(
       type: map['type'] as String,
@@ -1411,13 +1565,16 @@ class Schema<T> extends MCP {
   }
 }
 
+/// The MCP `BooleanSchema` schema type.
 class BooleanSchema extends PrimitiveSchemaDefinition<bool> {
   @override
   String get type => 'boolean';
 
+  /// Creates a [BooleanSchema].
   BooleanSchema({super.title, super.description, super.defaultValue})
       : super(type: 'boolean');
 
+  /// Builds a [BooleanSchema] from a decoded MCP JSON map.
   factory BooleanSchema.toMCP(Map<String, Object?> map) {
     return BooleanSchema(
       title: map['title'] as String?,
@@ -1427,14 +1584,21 @@ class BooleanSchema extends PrimitiveSchemaDefinition<bool> {
   }
 }
 
+/// The parameters for a request to elicit information from the user via a URL in the client.
 class ElicitRequestURLParams extends ElicitRequestParams {
   /// Discriminator — always `"url"`.
   String mode = "url";
+
+  /// The message to present to the user explaining why the interaction is needed.
   String message;
+
+  /// The URL that the user should navigate to.
   String url;
 
+  /// Creates an [ElicitRequestURLParams].
   ElicitRequestURLParams({required this.message, required this.url});
 
+  /// Converts this [ElicitRequestURLParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1444,6 +1608,7 @@ class ElicitRequestURLParams extends ElicitRequestParams {
     };
   }
 
+  /// Builds an [ElicitRequestURLParams] from a decoded MCP JSON map.
   factory ElicitRequestURLParams.toMCP(Map<String, Object?> map) {
     return ElicitRequestURLParams(
       message: map['message'] as String,
@@ -1452,7 +1617,9 @@ class ElicitRequestURLParams extends ElicitRequestParams {
   }
 }
 
+/// The MCP `EnumSchema` schema type.
 abstract class EnumSchema<T> extends PrimitiveSchemaDefinition<T> {
+  /// Creates an [EnumSchema].
   EnumSchema({
     required super.type,
     super.title,
@@ -1461,7 +1628,9 @@ abstract class EnumSchema<T> extends PrimitiveSchemaDefinition<T> {
   });
 }
 
+/// The MCP `SingleSelectEnumSchema` schema type.
 abstract class SingleSelectEnumSchema<T> extends EnumSchema<T> {
+  /// Creates a [SingleSelectEnumSchema].
   SingleSelectEnumSchema({
     required super.type,
     super.title,
@@ -1470,20 +1639,26 @@ abstract class SingleSelectEnumSchema<T> extends EnumSchema<T> {
   });
 }
 
+/// Schema for single-selection enumeration without display titles for options.
 class UntitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
+  /// Array of enum values to choose from.
   List<String> $enum;
 
+  /// Creates an [UntitledSingleSelectEnumSchema].
   UntitledSingleSelectEnumSchema({
     required this.$enum,
     super.defaultValue,
     super.title,
     super.description,
   }) : super(type: 'string');
+
+  /// Converts this [UntitledSingleSelectEnumSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'enum': $enum};
   }
 
+  /// Builds an [UntitledSingleSelectEnumSchema] from a decoded MCP JSON map.
   factory UntitledSingleSelectEnumSchema.toMCP(Map<String, Object?> map) {
     return UntitledSingleSelectEnumSchema(
       $enum: (map['enum'] as List<dynamic>).cast<String>(),
@@ -1494,9 +1669,11 @@ class UntitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
   }
 }
 
+/// Schema for single-selection enumeration with display titles for each option.
 class TitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
   List<({String $const, String title})> oneOf;
 
+  /// Creates a [TitledSingleSelectEnumSchema].
   TitledSingleSelectEnumSchema({
     required this.oneOf,
     super.defaultValue,
@@ -1504,6 +1681,7 @@ class TitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
     super.description,
   }) : super(type: 'string');
 
+  /// Converts this [TitledSingleSelectEnumSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1512,6 +1690,7 @@ class TitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
     };
   }
 
+  /// Builds a [TitledSingleSelectEnumSchema] from a decoded MCP JSON map.
   factory TitledSingleSelectEnumSchema.toMCP(Map<String, Object?> map) {
     return TitledSingleSelectEnumSchema(
       oneOf: (map['oneOf'] as List<dynamic>)
@@ -1526,16 +1705,25 @@ class TitledSingleSelectEnumSchema extends SingleSelectEnumSchema<String> {
   }
 }
 
+/// The MCP `MultiSelectEnumSchema` schema type.
 abstract class MultiSelectEnumSchema<T> extends EnumSchema<List<T>> {
+  /// Creates a [MultiSelectEnumSchema].
   MultiSelectEnumSchema({super.title, super.description, super.defaultValue})
       : super(type: 'array');
 }
 
+/// Schema for multiple-selection enumeration without display titles for options.
 class UntitledMultiSelectEnumSchema extends MultiSelectEnumSchema<String> {
+  /// Minimum number of items to select.
   int? minItems;
+
+  /// Maximum number of items to select.
   int? maxItems;
+
+  /// Schema for the array items.
   List<String> items;
 
+  /// Creates an [UntitledMultiSelectEnumSchema].
   UntitledMultiSelectEnumSchema({
     required this.items,
     this.minItems,
@@ -1545,6 +1733,7 @@ class UntitledMultiSelectEnumSchema extends MultiSelectEnumSchema<String> {
     super.description,
   });
 
+  /// Converts this [UntitledMultiSelectEnumSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1555,6 +1744,7 @@ class UntitledMultiSelectEnumSchema extends MultiSelectEnumSchema<String> {
     };
   }
 
+  /// Builds an [UntitledMultiSelectEnumSchema] from a decoded MCP JSON map.
   factory UntitledMultiSelectEnumSchema.toMCP(Map<String, Object?> map) {
     final itemsMap = map['items'] as Map<String, Object?>;
     return UntitledMultiSelectEnumSchema(
@@ -1570,7 +1760,9 @@ class UntitledMultiSelectEnumSchema extends MultiSelectEnumSchema<String> {
   }
 }
 
+/// Schema for multiple-selection enumeration with display titles for each option.
 class TitledMultiSelectEnumSchema extends UntitledMultiSelectEnumSchema {
+  /// Creates a [TitledMultiSelectEnumSchema].
   TitledMultiSelectEnumSchema({
     required super.items,
     super.minItems,
@@ -1580,6 +1772,7 @@ class TitledMultiSelectEnumSchema extends UntitledMultiSelectEnumSchema {
     super.description,
   });
 
+  /// Converts this [TitledMultiSelectEnumSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1590,6 +1783,7 @@ class TitledMultiSelectEnumSchema extends UntitledMultiSelectEnumSchema {
     };
   }
 
+  /// Builds a [TitledMultiSelectEnumSchema] from a decoded MCP JSON map.
   factory TitledMultiSelectEnumSchema.toMCP(Map<String, Object?> map) {
     final itemsMap = map['items'] as Map<String, Object?>;
     return TitledMultiSelectEnumSchema(
@@ -1606,10 +1800,15 @@ class TitledMultiSelectEnumSchema extends UntitledMultiSelectEnumSchema {
 }
 
 @Deprecated('Use TitledSingleSelectEnumSchema instead.')
+
+/// Use TitledSingleSelectEnumSchema instead.
 class LegacyTitledEnumSchema extends EnumSchema<String> {
   List<String> $enum;
+
+  /// (Legacy) Display names for enum values.
   List<String>? enumNames;
 
+  /// Creates a [LegacyTitledEnumSchema].
   LegacyTitledEnumSchema({
     required this.$enum,
     this.enumNames,
@@ -1618,11 +1817,13 @@ class LegacyTitledEnumSchema extends EnumSchema<String> {
     super.description,
   }) : super(type: 'string');
 
+  /// Converts this [LegacyTitledEnumSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'enum': $enum, 'enumNames': enumNames};
   }
 
+  /// Builds a [LegacyTitledEnumSchema] from a decoded MCP JSON map.
   factory LegacyTitledEnumSchema.toMCP(Map<String, Object?> map) {
     return LegacyTitledEnumSchema(
       $enum: (map['enum'] as List<dynamic>).cast<String>(),
@@ -1634,17 +1835,24 @@ class LegacyTitledEnumSchema extends EnumSchema<String> {
   }
 }
 
+/// The parameters for a request to elicit non-sensitive information from the user via a form in the client.
 class ElicitRequestFormParams extends ElicitRequestParams {
   /// Discriminator — always `"form"` (the default).
   String mode = "form";
+
+  /// The message to present to the user describing what information is being requested.
   String message;
+
+  /// A restricted subset of JSON Schema.
   ElicitRequestFormParamsSchema? requestedSchema;
 
+  /// Creates an [ElicitRequestFormParams].
   ElicitRequestFormParams({
     required this.message,
     this.requestedSchema,
   });
 
+  /// Converts this [ElicitRequestFormParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1654,6 +1862,7 @@ class ElicitRequestFormParams extends ElicitRequestParams {
     };
   }
 
+  /// Builds an [ElicitRequestFormParams] from a decoded MCP JSON map.
   factory ElicitRequestFormParams.toMCP(Map<String, Object?> map) {
     return ElicitRequestFormParams(
       message: map['message'] as String,
@@ -1666,12 +1875,14 @@ class ElicitRequestFormParams extends ElicitRequestParams {
   }
 }
 
+/// The MCP `ElicitRequestFormParamsSchema` schema type.
 class ElicitRequestFormParamsSchema extends MCP {
   String? $schema;
   String type = 'object';
   Map<String, PrimitiveSchemaDefinition> properties = {};
   List<String>? required;
 
+  /// Creates an [ElicitRequestFormParamsSchema].
   ElicitRequestFormParamsSchema({
     this.$schema,
     this.required,
@@ -1679,6 +1890,7 @@ class ElicitRequestFormParamsSchema extends MCP {
     required this.properties,
   });
 
+  /// Converts this [ElicitRequestFormParamsSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1692,6 +1904,7 @@ class ElicitRequestFormParamsSchema extends MCP {
     };
   }
 
+  /// Builds an [ElicitRequestFormParamsSchema] from a decoded MCP JSON map.
   factory ElicitRequestFormParamsSchema.toMCP(Map<String, Object?> map) {
     final propertiesMap = map['properties'] as Map<String, Object?>?;
     return ElicitRequestFormParamsSchema(
@@ -1710,7 +1923,9 @@ class ElicitRequestFormParamsSchema extends MCP {
   }
 }
 
+/// Restricted schema definitions that only allow primitive types without nested objects or arrays.
 abstract class PrimitiveSchemaDefinition<T> extends Schema<T> {
+  /// Creates a [PrimitiveSchemaDefinition].
   PrimitiveSchemaDefinition({
     required super.type,
     super.title,
@@ -1719,11 +1934,13 @@ abstract class PrimitiveSchemaDefinition<T> extends Schema<T> {
   });
 }
 
+/// The MCP `StringSchema` schema type.
 class StringSchema extends PrimitiveSchemaDefinition<String> {
   int? minLength;
   int? maxLength;
   StringFormat? format;
 
+  /// Creates a [StringSchema].
   StringSchema({
     this.minLength,
     this.maxLength,
@@ -1733,6 +1950,7 @@ class StringSchema extends PrimitiveSchemaDefinition<String> {
     super.description,
   }) : super(type: 'string');
 
+  /// Converts this [StringSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1743,6 +1961,7 @@ class StringSchema extends PrimitiveSchemaDefinition<String> {
     };
   }
 
+  /// Builds a [StringSchema] from a decoded MCP JSON map.
   factory StringSchema.toMCP(Map<String, Object?> map) {
     return StringSchema(
       minLength: map['minLength'] as int?,
@@ -1757,10 +1976,12 @@ class StringSchema extends PrimitiveSchemaDefinition<String> {
   }
 }
 
+/// The MCP `NumberSchema` schema type.
 class NumberSchema extends PrimitiveSchemaDefinition<num> {
   num? minimum;
   num? maximum;
 
+  /// Creates a [NumberSchema].
   NumberSchema({
     super.type = 'number',
     this.minimum,
@@ -1770,6 +1991,7 @@ class NumberSchema extends PrimitiveSchemaDefinition<num> {
     super.description,
   });
 
+  /// Converts this [NumberSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1779,6 +2001,7 @@ class NumberSchema extends PrimitiveSchemaDefinition<num> {
     };
   }
 
+  /// Builds a [NumberSchema] from a decoded MCP JSON map.
   factory NumberSchema.toMCP(Map<String, Object?> map) {
     return NumberSchema(
       minimum: map['minimum'] as num?,
@@ -1800,13 +2023,16 @@ class NumberSchema extends PrimitiveSchemaDefinition<num> {
 /// protocol version 2026-07-28 (SEP-2577); they remain in the specification
 /// for at least twelve months. See the deprecated features registry.
 class ClientCapabilities extends MapMC<String, Object?> {
+  /// Creates a [ClientCapabilities].
   ClientCapabilities(super.data);
 
+  /// Converts this [ClientCapabilities] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ClientCapabilities] from a decoded MCP JSON map.
   factory ClientCapabilities.toMCP(Map<String, Object?> map) {
     return ClientCapabilities(map);
   }
@@ -1832,6 +2058,7 @@ class Implementation extends MCP {
   /// Optional website URL.
   String? websiteUrl;
 
+  /// Creates an [Implementation].
   Implementation({
     this.icons,
     required this.name,
@@ -1841,6 +2068,7 @@ class Implementation extends MCP {
     this.websiteUrl,
   });
 
+  /// Converts this [Implementation] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1853,6 +2081,7 @@ class Implementation extends MCP {
     };
   }
 
+  /// Builds an [Implementation] from a decoded MCP JSON map.
   factory Implementation.toMCP(Map<String, Object?> map) {
     return Implementation(
       icons: map['icons'] != null
@@ -1879,13 +2108,16 @@ class Implementation extends MCP {
 /// 2026-07-28 (SEP-2577); it remains in the specification for at least
 /// twelve months. See the deprecated features registry.
 class ServerCapabilities extends MapMC<String, Object?> {
+  /// Creates a [ServerCapabilities].
   ServerCapabilities(super.data);
 
+  /// Converts this [ServerCapabilities] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ServerCapabilities] from a decoded MCP JSON map.
   factory ServerCapabilities.toMCP(Map<String, Object?> map) {
     return ServerCapabilities(map);
   }
@@ -1903,13 +2135,16 @@ class CancelledNotification extends MCP {
   String method = "notifications/cancelled";
   CancelledNotificationParams params;
 
+  /// Creates a [CancelledNotification].
   CancelledNotification({required this.params});
 
+  /// Converts this [CancelledNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
 
+  /// Builds a [CancelledNotification] from a decoded MCP JSON map.
   factory CancelledNotification.toMCP(Map<String, Object?> map) {
     return CancelledNotification(
       params: CancelledNotificationParams.toMCP(
@@ -1919,17 +2154,24 @@ class CancelledNotification extends MCP {
   }
 }
 
+/// Parameters for a notifications/cancelled notification.
 class CancelledNotificationParams extends MCP {
   NotificationMetaObject? $meta;
+
+  /// The ID of the request to cancel.
   String requestId;
+
+  /// An optional string describing the reason for the cancellation.
   String? reason;
 
+  /// Creates a [CancelledNotificationParams].
   CancelledNotificationParams({
     this.$meta,
     required this.requestId,
     this.reason,
   });
 
+  /// Converts this [CancelledNotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1939,6 +2181,7 @@ class CancelledNotificationParams extends MCP {
     };
   }
 
+  /// Builds a [CancelledNotificationParams] from a decoded MCP JSON map.
   factory CancelledNotificationParams.toMCP(Map<String, Object?> map) {
     return CancelledNotificationParams(
       $meta: map['_meta'] != null
@@ -1955,6 +2198,8 @@ class CancelledNotificationParams extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Parameters for a notifications/message notification.
 class LoggingMessageNotificationParams extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
@@ -1968,6 +2213,7 @@ class LoggingMessageNotificationParams extends MCP {
   /// Arbitrary log data (string or JSON-serialisable object).
   dynamic data;
 
+  /// Creates a [LoggingMessageNotificationParams].
   LoggingMessageNotificationParams({
     this.$meta,
     required this.level,
@@ -1975,6 +2221,7 @@ class LoggingMessageNotificationParams extends MCP {
     required this.data,
   });
 
+  /// Converts this [LoggingMessageNotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -1986,6 +2233,7 @@ class LoggingMessageNotificationParams extends MCP {
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [LoggingMessageNotificationParams] from a decoded MCP JSON map.
   factory LoggingMessageNotificationParams.toMCP(Map<String, Object?> map) {
     return LoggingMessageNotificationParams(
       $meta: map['_meta'] != null
@@ -2003,6 +2251,8 @@ class LoggingMessageNotificationParams extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// JSONRPCNotification of a log message passed from server to client.
 class LoggingMessageNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/message";
@@ -2010,14 +2260,17 @@ class LoggingMessageNotification extends MCP {
   // ignore: deprecated_member_use_from_same_package
   LoggingMessageNotificationParams params;
 
+  /// Creates a [LoggingMessageNotification].
   LoggingMessageNotification({required this.params});
 
+  /// Converts this [LoggingMessageNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [LoggingMessageNotification] from a decoded MCP JSON map.
   factory LoggingMessageNotification.toMCP(Map<String, Object?> map) {
     return LoggingMessageNotification(
       params: LoggingMessageNotificationParams.toMCP(
@@ -2027,18 +2280,22 @@ class LoggingMessageNotification extends MCP {
   }
 }
 
+/// An out-of-band notification used to inform the receiver of a progress update for a long-running request.
 class ProgressNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/progress";
   ProgressNotificationParams params;
 
+  /// Creates a [ProgressNotification].
   ProgressNotification({required this.params});
 
+  /// Converts this [ProgressNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
 
+  /// Builds a [ProgressNotification] from a decoded MCP JSON map.
   factory ProgressNotification.toMCP(Map<String, Object?> map) {
     return ProgressNotification(
       params: ProgressNotificationParams.toMCP(
@@ -2048,13 +2305,23 @@ class ProgressNotification extends MCP {
   }
 }
 
+/// Parameters for a notifications/progress notification.
 class ProgressNotificationParams extends MCP {
   NotificationMetaObject? $meta;
+
+  /// The progress token which was given in the initial request, used to associate this notification with the request that is proceeding.
   String progressToken;
+
+  /// The progress thus far.
   num progress;
+
+  /// Total number of items to process (or total progress required), if known.
   num? total;
+
+  /// An optional message describing the current progress.
   String? message;
 
+  /// Creates a [ProgressNotificationParams].
   ProgressNotificationParams({
     this.$meta,
     required this.progressToken,
@@ -2063,6 +2330,7 @@ class ProgressNotificationParams extends MCP {
     this.message,
   });
 
+  /// Converts this [ProgressNotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2074,6 +2342,7 @@ class ProgressNotificationParams extends MCP {
     };
   }
 
+  /// Builds a [ProgressNotificationParams] from a decoded MCP JSON map.
   factory ProgressNotificationParams.toMCP(Map<String, Object?> map) {
     return ProgressNotificationParams(
       $meta: map['_meta'] != null
@@ -2087,13 +2356,16 @@ class ProgressNotificationParams extends MCP {
   }
 }
 
+/// An optional notification from the server to the client, informing it that the list of resources it can read from has changed.
 class ResourceListChangedNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/resources/list_changed";
   NotificationParams? params;
 
+  /// Creates a [ResourceListChangedNotification].
   ResourceListChangedNotification({this.params});
 
+  /// Converts this [ResourceListChangedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2103,6 +2375,7 @@ class ResourceListChangedNotification extends MCP {
     };
   }
 
+  /// Builds a [ResourceListChangedNotification] from a decoded MCP JSON map.
   factory ResourceListChangedNotification.toMCP(Map<String, Object?> map) {
     return ResourceListChangedNotification(
       params: map['params'] != null
@@ -2112,6 +2385,7 @@ class ResourceListChangedNotification extends MCP {
   }
 }
 
+/// A notification from the server to the client, informing it that a resource has changed and may need to be read again.
 class ResourceUpdatedNotification extends MCP {
   ///jsonrpc: “2.0”;
   ///method: “notifications/resources/updated”;
@@ -2121,13 +2395,16 @@ class ResourceUpdatedNotification extends MCP {
   String method = "notifications/resources/updated";
   ResourceUpdatedNotificationParams params;
 
+  /// Creates a [ResourceUpdatedNotification].
   ResourceUpdatedNotification({required this.params});
 
+  /// Converts this [ResourceUpdatedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
 
+  /// Builds a [ResourceUpdatedNotification] from a decoded MCP JSON map.
   factory ResourceUpdatedNotification.toMCP(Map<String, Object?> map) {
     return ResourceUpdatedNotification(
       params: ResourceUpdatedNotificationParams.toMCP(
@@ -2137,12 +2414,17 @@ class ResourceUpdatedNotification extends MCP {
   }
 }
 
+/// Parameters for a notifications/resources/updated notification.
 class ResourceUpdatedNotificationParams extends MCP {
   NotificationMetaObject? $meta;
+
+  /// The URI of the resource that has been updated.
   String uri;
 
+  /// Creates a [ResourceUpdatedNotificationParams].
   ResourceUpdatedNotificationParams({this.$meta, required this.uri});
 
+  /// Converts this [ResourceUpdatedNotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2151,6 +2433,7 @@ class ResourceUpdatedNotificationParams extends MCP {
     };
   }
 
+  /// Builds a [ResourceUpdatedNotificationParams] from a decoded MCP JSON map.
   factory ResourceUpdatedNotificationParams.toMCP(Map<String, Object?> map) {
     return ResourceUpdatedNotificationParams(
       $meta: map['_meta'] != null
@@ -2161,13 +2444,16 @@ class ResourceUpdatedNotificationParams extends MCP {
   }
 }
 
+/// A JSON-RPC notification for the `rootsListChanged` event.
 class RootsListChangedNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/roots/list_changed";
   NotificationParams? params;
 
+  /// Creates a [RootsListChangedNotification].
   RootsListChangedNotification({this.params});
 
+  /// Converts this [RootsListChangedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2177,6 +2463,7 @@ class RootsListChangedNotification extends MCP {
     };
   }
 
+  /// Builds a [RootsListChangedNotification] from a decoded MCP JSON map.
   factory RootsListChangedNotification.toMCP(Map<String, Object?> map) {
     return RootsListChangedNotification(
       params: map['params'] != null
@@ -2186,13 +2473,16 @@ class RootsListChangedNotification extends MCP {
   }
 }
 
+/// An optional notification from the server to the client, informing it that the list of tools it offers has changed.
 class ToolListChangedNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/tools/list_changed";
   NotificationParams? params;
 
+  /// Creates a [ToolListChangedNotification].
   ToolListChangedNotification({this.params});
 
+  /// Converts this [ToolListChangedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2202,6 +2492,7 @@ class ToolListChangedNotification extends MCP {
     };
   }
 
+  /// Builds a [ToolListChangedNotification] from a decoded MCP JSON map.
   factory ToolListChangedNotification.toMCP(Map<String, Object?> map) {
     return ToolListChangedNotification(
       params: map['params'] != null
@@ -2218,27 +2509,34 @@ class ToolListChangedNotification extends MCP {
 class RequestParams extends MCP {
   RequestMetaObject $meta;
 
+  /// Creates a [RequestParams].
   RequestParams({required this.$meta});
 
+  /// Converts this [RequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'_meta': $meta.toMap()};
   }
 
+  /// Builds a [RequestParams] from a decoded MCP JSON map.
   factory RequestParams.toMCP(Map<String, Object?> map) {
     return RequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
     );
   }
 }
 
+/// An optional notification from the server to the client, informing it that the list of prompts it offers has changed.
 class PromptListChangedNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/prompts/list_changed";
   NotificationParams? params;
 
+  /// Creates a [PromptListChangedNotification].
   PromptListChangedNotification({this.params});
 
+  /// Converts this [PromptListChangedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2248,6 +2546,7 @@ class PromptListChangedNotification extends MCP {
     };
   }
 
+  /// Builds a [PromptListChangedNotification] from a decoded MCP JSON map.
   factory PromptListChangedNotification.toMCP(Map<String, Object?> map) {
     return PromptListChangedNotification(
       params: map['params'] != null
@@ -2257,14 +2556,17 @@ class PromptListChangedNotification extends MCP {
   }
 }
 
+/// Used by the client to get a prompt provided by the server.
 class GetPromptRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "prompts/get";
   GetPromptRequestParams params;
 
+  /// Creates a [GetPromptRequest].
   GetPromptRequest({required this.id, required this.params});
 
+  /// Converts this [GetPromptRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2275,6 +2577,7 @@ class GetPromptRequest extends MCP {
     };
   }
 
+  /// Builds a [GetPromptRequest] from a decoded MCP JSON map.
   factory GetPromptRequest.toMCP(Map<String, Object?> map) {
     return GetPromptRequest(
       id: map['id']?.toString() ?? '-1',
@@ -2285,10 +2588,15 @@ class GetPromptRequest extends MCP {
   }
 }
 
+/// Parameters for a prompts/get request.
 class GetPromptRequestParams extends InputResponseRequestParams {
+  /// The name of the prompt or prompt template.
   String name;
+
+  /// Arguments to use for templating the prompt.
   Map<String, String>? arguments;
 
+  /// Creates a [GetPromptRequestParams].
   GetPromptRequestParams({
     required super.$meta,
     super.inputResponses,
@@ -2297,6 +2605,7 @@ class GetPromptRequestParams extends InputResponseRequestParams {
     this.arguments,
   });
 
+  /// Converts this [GetPromptRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2306,9 +2615,11 @@ class GetPromptRequestParams extends InputResponseRequestParams {
     };
   }
 
+  /// Builds a [GetPromptRequestParams] from a decoded MCP JSON map.
   factory GetPromptRequestParams.toMCP(Map<String, Object?> map) {
     return GetPromptRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
@@ -2319,18 +2630,22 @@ class GetPromptRequestParams extends InputResponseRequestParams {
   }
 }
 
+/// A successful response from the server for a prompts/get request.
 class GetPromptResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   GetPromptResultOutcome result;
 
+  /// Creates a [GetPromptResultResponse].
   GetPromptResultResponse({required this.id, required this.result});
 
+  /// Converts this [GetPromptResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [GetPromptResultResponse] from a decoded MCP JSON map.
   factory GetPromptResultResponse.toMCP(Map<String, Object?> map) {
     return GetPromptResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -2341,13 +2656,19 @@ class GetPromptResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a prompts/get request.
 class GetPromptResult extends MapMC<String, Object?>
     implements GetPromptResultOutcome {
   ResultMetaObject? $meta;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String resultType;
+
+  /// An optional description for the prompt.
   String? description;
   List<PromptMessage> messages;
 
+  /// Creates a [GetPromptResult].
   GetPromptResult({
     this.$meta,
     this.resultType = 'complete',
@@ -2356,6 +2677,7 @@ class GetPromptResult extends MapMC<String, Object?>
     Map<String, Object?>? additionalData,
   }) : super(additionalData ?? {});
 
+  /// Converts this [GetPromptResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2367,6 +2689,7 @@ class GetPromptResult extends MapMC<String, Object?>
     };
   }
 
+  /// Builds a [GetPromptResult] from a decoded MCP JSON map.
   factory GetPromptResult.toMCP(Map<String, Object?> map) {
     return GetPromptResult(
       $meta: map['_meta'] != null
@@ -2389,15 +2712,21 @@ class GetPromptResult extends MapMC<String, Object?>
   }
 }
 
+/// Describes a message returned as part of a prompt.
 class PromptMessage extends MCP {
   Role role;
   ContentBlock content;
+
+  /// Creates a [PromptMessage].
   PromptMessage({required this.role, required this.content});
+
+  /// Converts this [PromptMessage] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'role': role.toString(), 'content': content.toMap()};
   }
 
+  /// Builds a [PromptMessage] from a decoded MCP JSON map.
   factory PromptMessage.toMCP(Map<String, Object?> map) {
     return PromptMessage(
       role: Role.to(map['role'] as String),
@@ -2406,14 +2735,17 @@ class PromptMessage extends MCP {
   }
 }
 
+/// Sent from the client to request a list of prompts and prompt templates the server has.
 class ListPromptsRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "prompts/list";
   PaginatedRequestParams? params;
 
+  /// Creates a [ListPromptsRequest].
   ListPromptsRequest({required this.id, this.params});
 
+  /// Converts this [ListPromptsRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2424,6 +2756,7 @@ class ListPromptsRequest extends MCP {
     };
   }
 
+  /// Builds a [ListPromptsRequest] from a decoded MCP JSON map.
   factory ListPromptsRequest.toMCP(Map<String, Object?> map) {
     return ListPromptsRequest(
       id: map['id']?.toString() ?? '-1',
@@ -2434,17 +2767,22 @@ class ListPromptsRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a prompts/list request.
 class ListPromptsResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   ListPromptsResult result;
+
+  /// Creates a [ListPromptsResultResponse].
   ListPromptsResultResponse({required this.id, required this.result});
 
+  /// Converts this [ListPromptsResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [ListPromptsResultResponse] from a decoded MCP JSON map.
   factory ListPromptsResultResponse.toMCP(Map<String, Object?> map) {
     return ListPromptsResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -2453,15 +2791,22 @@ class ListPromptsResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a prompts/list request.
 class ListPromptsResult extends MapMC<String, Object?> {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
+
+  /// An opaque token representing the pagination position after the last returned result.
   String? get nextCursor => data['nextCursor'] as String?;
   List<Prompt> get prompts => (data['prompts'] as List<dynamic>)
       .map((e) => Prompt.toMCP(e as Map<String, Object?>))
       .toList();
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -2473,6 +2818,7 @@ class ListPromptsResult extends MapMC<String, Object?> {
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [ListPromptsResult].
   ListPromptsResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -2491,11 +2837,13 @@ class ListPromptsResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [ListPromptsResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ListPromptsResult] from a decoded MCP JSON map.
   factory ListPromptsResult.toMCP(Map<String, Object?> map) {
     return ListPromptsResult(
       $meta: map['_meta'] != null
@@ -2536,6 +2884,7 @@ class Prompt extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
 
+  /// Creates a [Prompt].
   Prompt({
     this.icons,
     required this.name,
@@ -2545,6 +2894,7 @@ class Prompt extends MCP {
     this.$meta,
   });
 
+  /// Converts this [Prompt] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2558,6 +2908,7 @@ class Prompt extends MCP {
     };
   }
 
+  /// Builds a [Prompt] from a decoded MCP JSON map.
   factory Prompt.toMCP(Map<String, Object?> map) {
     return Prompt(
       icons: (map['icons'] as List<dynamic>?)
@@ -2590,6 +2941,7 @@ class PromptArgument extends MCP {
   /// Whether the argument must be provided.
   bool? required;
 
+  /// Creates a [PromptArgument].
   PromptArgument({
     required this.name,
     this.title,
@@ -2597,6 +2949,7 @@ class PromptArgument extends MCP {
     this.required,
   });
 
+  /// Converts this [PromptArgument] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2607,6 +2960,7 @@ class PromptArgument extends MCP {
     };
   }
 
+  /// Builds a [PromptArgument] from a decoded MCP JSON map.
   factory PromptArgument.toMCP(Map<String, Object?> map) {
     return PromptArgument(
       name: map['name'] as String,
@@ -2617,14 +2971,17 @@ class PromptArgument extends MCP {
   }
 }
 
+/// Sent from the client to request a list of resources the server has.
 class ListResourcesRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "resources/list";
   PaginatedRequestParams? params;
 
+  /// Creates a [ListResourcesRequest].
   ListResourcesRequest({required this.id, this.params});
 
+  /// Converts this [ListResourcesRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2635,6 +2992,7 @@ class ListResourcesRequest extends MCP {
     };
   }
 
+  /// Builds a [ListResourcesRequest] from a decoded MCP JSON map.
   factory ListResourcesRequest.toMCP(Map<String, Object?> map) {
     return ListResourcesRequest(
       id: map['id']?.toString() ?? '-1',
@@ -2645,18 +3003,22 @@ class ListResourcesRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a resources/list request.
 class ListResourcesResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   ListResourcesResult result;
 
+  /// Creates a [ListResourcesResultResponse].
   ListResourcesResultResponse({required this.id, required this.result});
 
+  /// Converts this [ListResourcesResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [ListResourcesResultResponse] from a decoded MCP JSON map.
   factory ListResourcesResultResponse.toMCP(Map<String, Object?> map) {
     return ListResourcesResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -2665,15 +3027,22 @@ class ListResourcesResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a resources/list request.
 class ListResourcesResult extends MapMC<String, Object?> {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
+
+  /// An opaque token representing the pagination position after the last returned result.
   String? get nextCursor => data['nextCursor'] as String?;
   List<Resource> get resources => (data['resources'] as List<dynamic>)
       .map((e) => Resource.toMCP(e as Map<String, Object?>))
       .toList();
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -2685,6 +3054,7 @@ class ListResourcesResult extends MapMC<String, Object?> {
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [ListResourcesResult].
   ListResourcesResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -2703,11 +3073,13 @@ class ListResourcesResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [ListResourcesResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ListResourcesResult] from a decoded MCP JSON map.
   factory ListResourcesResult.toMCP(Map<String, Object?> map) {
     return ListResourcesResult(
       $meta: map['_meta'] != null
@@ -2763,6 +3135,7 @@ class Resource extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
 
+  /// Creates a [Resource].
   Resource({
     this.icons,
     required this.name,
@@ -2775,6 +3148,7 @@ class Resource extends MCP {
     this.$meta,
   });
 
+  /// Converts this [Resource] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2790,6 +3164,7 @@ class Resource extends MCP {
     };
   }
 
+  /// Builds a [Resource] from a decoded MCP JSON map.
   factory Resource.toMCP(Map<String, Object?> map) {
     return Resource(
       icons: (map['icons'] as List<dynamic>?)
@@ -2811,14 +3186,17 @@ class Resource extends MCP {
   }
 }
 
+/// Sent from the client to the server, to read a specific resource URI.
 class ReadResourceRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "resources/read";
   ReadResourceRequestParams params;
 
+  /// Creates a [ReadResourceRequest].
   ReadResourceRequest({required this.id, required this.params});
 
+  /// Converts this [ReadResourceRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -2829,6 +3207,7 @@ class ReadResourceRequest extends MCP {
     };
   }
 
+  /// Builds a [ReadResourceRequest] from a decoded MCP JSON map.
   factory ReadResourceRequest.toMCP(Map<String, Object?> map) {
     return ReadResourceRequest(
       id: map['id']?.toString() ?? '-1',
@@ -2839,9 +3218,12 @@ class ReadResourceRequest extends MCP {
   }
 }
 
+/// Parameters for a resources/read request.
 class ReadResourceRequestParams extends InputResponseRequestParams {
+  /// The URI of the resource.
   String uri;
 
+  /// Creates a [ReadResourceRequestParams].
   ReadResourceRequestParams({
     required super.$meta,
     super.inputResponses,
@@ -2849,14 +3231,17 @@ class ReadResourceRequestParams extends InputResponseRequestParams {
     required this.uri,
   });
 
+  /// Converts this [ReadResourceRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {...super.toMap(), 'uri': uri};
   }
 
+  /// Builds a [ReadResourceRequestParams] from a decoded MCP JSON map.
   factory ReadResourceRequestParams.toMCP(Map<String, Object?> map) {
     return ReadResourceRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       uri: map['uri'] as String,
@@ -2864,18 +3249,22 @@ class ReadResourceRequestParams extends InputResponseRequestParams {
   }
 }
 
+/// A successful response from the server for a resources/read request.
 class ReadResourceResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   ReadResourceResultOutcome result;
 
+  /// Creates a [ReadResourceResultResponse].
   ReadResourceResultResponse({required this.id, required this.result});
 
+  /// Converts this [ReadResourceResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [ReadResourceResultResponse] from a decoded MCP JSON map.
   factory ReadResourceResultResponse.toMCP(Map<String, Object?> map) {
     return ReadResourceResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -2886,15 +3275,20 @@ class ReadResourceResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a resources/read request.
 class ReadResourceResult extends MapMC<String, Object?>
     implements ReadResourceResultOutcome {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
   List<ResourceContents> get contents => (data['contents'] as List<dynamic>)
       .map((e) => ResourceContents.toMCP(e as Map<String, Object?>))
       .toList();
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -2905,6 +3299,7 @@ class ReadResourceResult extends MapMC<String, Object?>
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [ReadResourceResult].
   ReadResourceResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -2921,11 +3316,13 @@ class ReadResourceResult extends MapMC<String, Object?>
           ...?additionalData,
         });
 
+  /// Converts this [ReadResourceResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ReadResourceResult] from a decoded MCP JSON map.
   factory ReadResourceResult.toMCP(Map<String, Object?> map) {
     return ReadResourceResult(
       $meta: map['_meta'] != null
@@ -2976,6 +3373,7 @@ class ResourceTemplate extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
 
+  /// Creates a [ResourceTemplate].
   ResourceTemplate({
     this.icons,
     required this.name,
@@ -2987,6 +3385,7 @@ class ResourceTemplate extends MCP {
     this.$meta,
   });
 
+  /// Converts this [ResourceTemplate] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3001,6 +3400,7 @@ class ResourceTemplate extends MCP {
     };
   }
 
+  /// Builds a [ResourceTemplate] from a decoded MCP JSON map.
   factory ResourceTemplate.toMCP(Map<String, Object?> map) {
     return ResourceTemplate(
       icons: (map['icons'] as List<dynamic>?)
@@ -3021,14 +3421,17 @@ class ResourceTemplate extends MCP {
   }
 }
 
+/// Sent from the client to request a list of resource templates the server has.
 class ListResourceTemplatesRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "resources/templates/list";
   PaginatedRequestParams? params;
 
+  /// Creates a [ListResourceTemplatesRequest].
   ListResourceTemplatesRequest({required this.id, this.params});
 
+  /// Converts this [ListResourceTemplatesRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3039,6 +3442,7 @@ class ListResourceTemplatesRequest extends MCP {
     };
   }
 
+  /// Builds a [ListResourceTemplatesRequest] from a decoded MCP JSON map.
   factory ListResourceTemplatesRequest.toMCP(Map<String, Object?> map) {
     return ListResourceTemplatesRequest(
       id: map['id']?.toString() ?? '-1',
@@ -3049,18 +3453,22 @@ class ListResourceTemplatesRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a resources/templates/list request.
 class ListResourceTemplatesResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   ListResourceTemplatesResult result;
 
+  /// Creates a [ListResourceTemplatesResultResponse].
   ListResourceTemplatesResultResponse({required this.id, required this.result});
 
+  /// Converts this [ListResourceTemplatesResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [ListResourceTemplatesResultResponse] from a decoded MCP JSON map.
   factory ListResourceTemplatesResultResponse.toMCP(Map<String, Object?> map) {
     return ListResourceTemplatesResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -3071,16 +3479,23 @@ class ListResourceTemplatesResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a resources/templates/list request.
 class ListResourceTemplatesResult extends MapMC<String, Object?> {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
+
+  /// An opaque token representing the pagination position after the last returned result.
   String? get nextCursor => data['nextCursor'] as String?;
   List<ResourceTemplate> get resourceTemplates =>
       (data['resourceTemplates'] as List<dynamic>)
           .map((e) => ResourceTemplate.toMCP(e as Map<String, Object?>))
           .toList();
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -3092,6 +3507,7 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [ListResourceTemplatesResult].
   ListResourceTemplatesResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -3110,11 +3526,13 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [ListResourceTemplatesResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ListResourceTemplatesResult] from a decoded MCP JSON map.
   factory ListResourceTemplatesResult.toMCP(Map<String, Object?> map) {
     return ListResourceTemplatesResult(
       $meta: map['_meta'] != null
@@ -3144,11 +3562,19 @@ class ListResourceTemplatesResult extends MapMC<String, Object?> {
 /// Filter describing which change notifications a `subscriptions/listen`
 /// stream should deliver.
 class SubscriptionFilter extends MCP {
+  /// If true, receive notifications/tools/list\_changed.
   bool? toolsListChanged;
+
+  /// If true, receive notifications/prompts/list\_changed.
   bool? promptsListChanged;
+
+  /// If true, receive notifications/resources/list\_changed.
   bool? resourcesListChanged;
+
+  /// Subscribe to notifications/resources/updated for these resource URIs.
   List<String>? resourceSubscriptions;
 
+  /// Creates a [SubscriptionFilter].
   SubscriptionFilter({
     this.toolsListChanged,
     this.promptsListChanged,
@@ -3156,6 +3582,7 @@ class SubscriptionFilter extends MCP {
     this.resourceSubscriptions,
   });
 
+  /// Converts this [SubscriptionFilter] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3168,6 +3595,7 @@ class SubscriptionFilter extends MCP {
     };
   }
 
+  /// Builds a [SubscriptionFilter] from a decoded MCP JSON map.
   factory SubscriptionFilter.toMCP(Map<String, Object?> map) {
     return SubscriptionFilter(
       toolsListChanged: map['toolsListChanged'] as bool?,
@@ -3179,23 +3607,30 @@ class SubscriptionFilter extends MCP {
   }
 }
 
+/// Parameters for a subscriptions/listen request.
 class SubscriptionsListenRequestParams extends MCP {
   RequestMetaObject $meta;
+
+  /// The notifications the client opts in to on this stream.
   SubscriptionFilter notifications;
 
+  /// Creates a [SubscriptionsListenRequestParams].
   SubscriptionsListenRequestParams({
     required this.$meta,
     required this.notifications,
   });
 
+  /// Converts this [SubscriptionsListenRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'_meta': $meta.toMap(), 'notifications': notifications.toMap()};
   }
 
+  /// Builds a [SubscriptionsListenRequestParams] from a decoded MCP JSON map.
   factory SubscriptionsListenRequestParams.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       notifications: SubscriptionFilter.toMCP(
         map['notifications'] as Map<String, Object?>,
       ),
@@ -3212,8 +3647,10 @@ class SubscriptionsListenRequest extends MCP {
   String method = "subscriptions/listen";
   SubscriptionsListenRequestParams params;
 
+  /// Creates a [SubscriptionsListenRequest].
   SubscriptionsListenRequest({required this.id, required this.params});
 
+  /// Converts this [SubscriptionsListenRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3224,6 +3661,7 @@ class SubscriptionsListenRequest extends MCP {
     };
   }
 
+  /// Builds a [SubscriptionsListenRequest] from a decoded MCP JSON map.
   factory SubscriptionsListenRequest.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenRequest(
       id: map['id']?.toString() ?? '-1',
@@ -3236,6 +3674,7 @@ class SubscriptionsListenRequest extends MCP {
 
 /// The `_meta` object carried on a [SubscriptionsListenResult].
 class SubscriptionsListenResultMetaObject extends MapMC<String, Object?> {
+  /// Creates a [SubscriptionsListenResultMetaObject].
   SubscriptionsListenResultMetaObject({
     Implementation? serverInfo,
     required String subscriptionId,
@@ -3266,19 +3705,19 @@ class SubscriptionsListenResultMetaObject extends MapMC<String, Object?> {
   set subscriptionId(String value) =>
       data['io.modelcontextprotocol/subscriptionId'] = value;
 
+  /// Converts this [SubscriptionsListenResultMetaObject] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() => data;
 
+  /// Builds a [SubscriptionsListenResultMetaObject] from a decoded MCP JSON map.
   factory SubscriptionsListenResultMetaObject.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenResultMetaObject(
       serverInfo: map['io.modelcontextprotocol/serverInfo'] != null
           ? Implementation.toMCP(
-              map['io.modelcontextprotocol/serverInfo']
-                  as Map<String, Object?>,
+              map['io.modelcontextprotocol/serverInfo'] as Map<String, Object?>,
             )
           : null,
-      subscriptionId:
-          map['io.modelcontextprotocol/subscriptionId'].toString(),
+      subscriptionId: map['io.modelcontextprotocol/subscriptionId'].toString(),
       additionalData: Map<String, Object?>.from(map)
         ..removeWhere(
           (key, _) =>
@@ -3292,6 +3731,7 @@ class SubscriptionsListenResultMetaObject extends MapMC<String, Object?> {
 /// Sent by the server, at most once, to gracefully terminate a
 /// `subscriptions/listen` stream. The result body is otherwise empty.
 class SubscriptionsListenResult extends MapMC<String, Object?> {
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
   SubscriptionsListenResultMetaObject get $meta =>
       SubscriptionsListenResultMetaObject.toMCP(
@@ -3302,6 +3742,7 @@ class SubscriptionsListenResult extends MapMC<String, Object?> {
   set $meta(SubscriptionsListenResultMetaObject value) =>
       data['_meta'] = value.toMap();
 
+  /// Creates a [SubscriptionsListenResult].
   SubscriptionsListenResult({
     String resultType = 'complete',
     required SubscriptionsListenResultMetaObject $meta,
@@ -3312,9 +3753,11 @@ class SubscriptionsListenResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [SubscriptionsListenResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() => data;
 
+  /// Builds a [SubscriptionsListenResult] from a decoded MCP JSON map.
   factory SubscriptionsListenResult.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenResult(
       resultType: map['resultType'] as String? ?? 'complete',
@@ -3327,18 +3770,22 @@ class SubscriptionsListenResult extends MapMC<String, Object?> {
   }
 }
 
+/// A successful response from the server for a subscriptions/listen request, sent when the server tears the subscription down gracefully.
 class SubscriptionsListenResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   SubscriptionsListenResult result;
 
+  /// Creates a [SubscriptionsListenResultResponse].
   SubscriptionsListenResultResponse({required this.id, required this.result});
 
+  /// Converts this [SubscriptionsListenResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [SubscriptionsListenResultResponse] from a decoded MCP JSON map.
   factory SubscriptionsListenResultResponse.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -3354,13 +3801,17 @@ class SubscriptionsListenResultResponse extends MCP {
 /// deliver on it.
 class SubscriptionsAcknowledgedNotificationParams extends MCP {
   NotificationMetaObject? $meta;
+
+  /// The subset of requested notification types the server agreed to honor.
   SubscriptionFilter notifications;
 
+  /// Creates a [SubscriptionsAcknowledgedNotificationParams].
   SubscriptionsAcknowledgedNotificationParams({
     this.$meta,
     required this.notifications,
   });
 
+  /// Converts this [SubscriptionsAcknowledgedNotificationParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3369,6 +3820,7 @@ class SubscriptionsAcknowledgedNotificationParams extends MCP {
     };
   }
 
+  /// Builds a [SubscriptionsAcknowledgedNotificationParams] from a decoded MCP JSON map.
   factory SubscriptionsAcknowledgedNotificationParams.toMCP(
     Map<String, Object?> map,
   ) {
@@ -3383,18 +3835,22 @@ class SubscriptionsAcknowledgedNotificationParams extends MCP {
   }
 }
 
+/// Sent by the server to acknowledge that a subscriptions/listen subscription has been established and to report which notification types it agreed to honor.
 class SubscriptionsAcknowledgedNotification extends MCP {
   String jsonrpc = "2.0";
   String method = "notifications/subscriptions/acknowledged";
   SubscriptionsAcknowledgedNotificationParams params;
 
+  /// Creates a [SubscriptionsAcknowledgedNotification].
   SubscriptionsAcknowledgedNotification({required this.params});
 
+  /// Converts this [SubscriptionsAcknowledgedNotification] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'method': method, 'params': params.toMap()};
   }
 
+  /// Builds a [SubscriptionsAcknowledgedNotification] from a decoded MCP JSON map.
   factory SubscriptionsAcknowledgedNotification.toMCP(
     Map<String, Object?> map,
   ) {
@@ -3410,13 +3866,20 @@ class SubscriptionsAcknowledgedNotification extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Represents a root directory or file that the server can operate on.
 class Root extends MCP {
+  /// The URI identifying the root.
   String uri;
+
+  /// An optional name for the root.
   String? name;
   MetaObject? $meta;
 
+  /// Creates a [Root].
   Root({required this.uri, this.name, this.$meta});
 
+  /// Converts this [Root] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3426,6 +3889,7 @@ class Root extends MCP {
     };
   }
 
+  /// Builds a [Root] from a decoded MCP JSON map.
   factory Root.toMCP(Map<String, Object?> map) {
     return Root(
       uri: map['uri'] as String,
@@ -3441,18 +3905,23 @@ class Root extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// The result returned by the client for a roots/list request.
 class ListRootsResult extends MCP {
   // ignore: deprecated_member_use_from_same_package
   List<Root> roots;
 
+  /// Creates a [ListRootsResult].
   ListRootsResult({required this.roots});
 
+  /// Converts this [ListRootsResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'roots': roots.map((e) => e.toMap()).toList()};
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [ListRootsResult] from a decoded MCP JSON map.
   factory ListRootsResult.toMCP(Map<String, Object?> map) {
     return ListRootsResult(
       roots: (map['roots'] as List<dynamic>)
@@ -3467,17 +3936,22 @@ class ListRootsResult extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Sent from the server to request a list of root URIs from the client.
 class ListRootsRequest extends MCP {
   String method = "roots/list";
   RequestParams? params;
 
+  /// Creates a [ListRootsRequest].
   ListRootsRequest({this.params});
 
+  /// Converts this [ListRootsRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'method': method, if (params != null) 'params': params!.toMap()};
   }
 
+  /// Builds a [ListRootsRequest] from a decoded MCP JSON map.
   factory ListRootsRequest.toMCP(Map<String, Object?> map) {
     return ListRootsRequest(
       params: map['params'] != null
@@ -3491,16 +3965,22 @@ class ListRootsRequest extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Hints to use for model selection.
 class ModelHint extends MCP {
+  /// A hint for a model name.
   String? name;
 
+  /// Creates a [ModelHint].
   ModelHint({this.name});
 
+  /// Converts this [ModelHint] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {if (name != null) 'name': name};
   }
 
+  /// Builds a [ModelHint] from a decoded MCP JSON map.
   factory ModelHint.toMCP(Map<String, Object?> map) {
     return ModelHint(name: map['name'] as String?);
   }
@@ -3510,13 +3990,23 @@ class ModelHint extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// The server's preferences for model selection, requested of the client during sampling.
 class ModelPreferences extends MCP {
   // ignore: deprecated_member_use_from_same_package
+  /// Optional hints to use for model selection.
   List<ModelHint>? hints;
+
+  /// How much to prioritize cost when selecting a model.
   num? costPriority;
+
+  /// How much to prioritize sampling speed (latency) when selecting a model.
   num? speedPriority;
+
+  /// How much to prioritize intelligence and capabilities when selecting a model.
   num? intelligencePriority;
 
+  /// Creates a [ModelPreferences].
   ModelPreferences({
     this.hints,
     this.costPriority,
@@ -3524,6 +4014,7 @@ class ModelPreferences extends MCP {
     this.intelligencePriority,
   });
 
+  /// Converts this [ModelPreferences] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3536,6 +4027,7 @@ class ModelPreferences extends MCP {
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [ModelPreferences] from a decoded MCP JSON map.
   factory ModelPreferences.toMCP(Map<String, Object?> map) {
     return ModelPreferences(
       hints: (map['hints'] as List<dynamic>?)
@@ -3558,7 +4050,10 @@ class ModelPreferences extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// The MCP `SamplingMessageContentBlock` schema type.
 abstract class SamplingMessageContentBlock implements MCP {
+  /// Builds a [SamplingMessageContentBlock] from a decoded MCP JSON map.
   factory SamplingMessageContentBlock.toMCP(Map<String, Object?> map) {
     final block = ContentBlock.toMCP(map);
     if (block is SamplingMessageContentBlock) {
@@ -3574,6 +4069,8 @@ abstract class SamplingMessageContentBlock implements MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Describes a message issued to or received from an LLM API.
 class SamplingMessage extends MCP {
   Role role;
 
@@ -3581,8 +4078,10 @@ class SamplingMessage extends MCP {
   List<SamplingMessageContentBlock> content;
   MetaObject? $meta;
 
+  /// Creates a [SamplingMessage].
   SamplingMessage({required this.role, required this.content, this.$meta});
 
+  /// Converts this [SamplingMessage] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3593,6 +4092,7 @@ class SamplingMessage extends MCP {
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [SamplingMessage] from a decoded MCP JSON map.
   factory SamplingMessage.toMCP(Map<String, Object?> map) {
     return SamplingMessage(
       role: Role.to(map['role'] as String),
@@ -3613,16 +4113,22 @@ class SamplingMessage extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Controls tool selection behavior for sampling requests.
 class ToolChoice extends MCP {
+  /// Controls the tool use ability of the model:
   String? mode;
 
+  /// Creates a [ToolChoice].
   ToolChoice({this.mode});
 
+  /// Converts this [ToolChoice] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {if (mode != null) 'mode': mode};
   }
 
+  /// Builds a [ToolChoice] from a decoded MCP JSON map.
   factory ToolChoice.toMCP(Map<String, Object?> map) {
     return ToolChoice(mode: map['mode'] as String?);
   }
@@ -3632,15 +4138,25 @@ class ToolChoice extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// The result of a tool use, provided by the user back to the assistant.
 class ToolResultContent extends ContentBlock
     // ignore: deprecated_member_use_from_same_package
     implements
         SamplingMessageContentBlock {
+  /// The ID of the tool use this result corresponds to.
   String toolUseId;
+
+  /// The unstructured result content of the tool use.
   List<ContentBlock> content;
+
+  /// An optional structured result value.
   Map<String, Object?>? structuredContent;
+
+  /// Whether the tool use resulted in an error.
   bool? isError;
 
+  /// Creates a [ToolResultContent].
   ToolResultContent({
     required this.toolUseId,
     required this.content,
@@ -3650,6 +4166,7 @@ class ToolResultContent extends ContentBlock
     super.$meta,
   }) : super(type: 'tool_result', data: '', mimeType: '');
 
+  /// Converts this [ToolResultContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3663,6 +4180,7 @@ class ToolResultContent extends ContentBlock
     };
   }
 
+  /// Builds a [ToolResultContent] from a decoded MCP JSON map.
   factory ToolResultContent.toMCP(Map<String, Object?> map) {
     return ToolResultContent(
       toolUseId: map['toolUseId'] as String,
@@ -3685,14 +4203,22 @@ class ToolResultContent extends ContentBlock
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// A request from the assistant to call a tool.
 class ToolUseContent extends ContentBlock
     // ignore: deprecated_member_use_from_same_package
     implements
         SamplingMessageContentBlock {
+  /// A unique identifier for this tool use.
   String id;
+
+  /// The name of the tool to call.
   String name;
+
+  /// The arguments to pass to the tool, conforming to the tool's input schema.
   Map<String, Object?> input;
 
+  /// Creates a [ToolUseContent].
   ToolUseContent({
     required this.id,
     required this.name,
@@ -3701,6 +4227,7 @@ class ToolUseContent extends ContentBlock
     super.$meta,
   }) : super(type: 'tool_use', data: '', mimeType: '');
 
+  /// Converts this [ToolUseContent] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3713,6 +4240,7 @@ class ToolUseContent extends ContentBlock
     };
   }
 
+  /// Builds a [ToolUseContent] from a decoded MCP JSON map.
   factory ToolUseContent.toMCP(Map<String, Object?> map) {
     return ToolUseContent(
       id: map['id']?.toString() ?? '-1',
@@ -3745,6 +4273,7 @@ class ToolAnnotations extends MCP {
   /// If `true`, the tool interacts with an open world of external entities.
   bool? openWorldHint;
 
+  /// Creates a [ToolAnnotations].
   ToolAnnotations({
     this.title,
     this.readOnlyHint,
@@ -3753,6 +4282,7 @@ class ToolAnnotations extends MCP {
     this.openWorldHint,
   });
 
+  /// Converts this [ToolAnnotations] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3764,6 +4294,7 @@ class ToolAnnotations extends MCP {
     };
   }
 
+  /// Builds a [ToolAnnotations] from a decoded MCP JSON map.
   factory ToolAnnotations.toMCP(Map<String, Object?> map) {
     return ToolAnnotations(
       title: map['title'] as String?,
@@ -3799,6 +4330,7 @@ class ToolSchema extends MCP {
   /// preserved losslessly on round-trip.
   Map<String, Object?>? additionalData;
 
+  /// Creates a [ToolSchema].
   ToolSchema({
     this.$schema,
     this.properties,
@@ -3807,6 +4339,7 @@ class ToolSchema extends MCP {
     this.additionalData,
   });
 
+  /// Converts this [ToolSchema] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3818,6 +4351,7 @@ class ToolSchema extends MCP {
     };
   }
 
+  /// Builds a [ToolSchema] from a decoded MCP JSON map.
   factory ToolSchema.toMCP(Map<String, Object?> map) {
     return ToolSchema(
       $schema: map[r'$schema'] as String?,
@@ -3862,6 +4396,7 @@ class Tool extends MCP {
   /// Optional metadata.
   MetaObject? $meta;
 
+  /// Creates a [Tool].
   Tool({
     this.icons,
     required this.name,
@@ -3873,6 +4408,7 @@ class Tool extends MCP {
     this.$meta,
   });
 
+  /// Converts this [Tool] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3887,6 +4423,7 @@ class Tool extends MCP {
     };
   }
 
+  /// Builds a [Tool] from a decoded MCP JSON map.
   factory Tool.toMCP(Map<String, Object?> map) {
     return Tool(
       icons: (map['icons'] as List<dynamic>?)
@@ -3913,21 +4450,36 @@ class Tool extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// Parameters for a sampling/createMessage request.
 class CreateMessageRequestParams extends MCP {
   // ignore: deprecated_member_use_from_same_package
   List<SamplingMessage> messages;
   // ignore: deprecated_member_use_from_same_package
+  /// The server's preferences for which model to select.
   ModelPreferences? modelPreferences;
+
+  /// An optional system prompt the server wants to use for sampling.
   String? systemPrompt;
+
+  /// A request to include context from one or more MCP servers (including the caller), to be attached to the prompt.
   String? includeContext;
   num? temperature;
+
+  /// The requested maximum number of tokens to sample (to prevent runaway completions).
   int maxTokens;
   List<String>? stopSequences;
+
+  /// Optional metadata to pass through to the LLM provider.
   Map<String, Object?>? metadata;
+
+  /// Tools that the model may use during generation.
   List<Tool>? tools;
   // ignore: deprecated_member_use_from_same_package
+  /// Controls how the model uses tools.
   ToolChoice? toolChoice;
 
+  /// Creates a [CreateMessageRequestParams].
   CreateMessageRequestParams({
     required this.messages,
     this.modelPreferences,
@@ -3941,6 +4493,7 @@ class CreateMessageRequestParams extends MCP {
     this.toolChoice,
   });
 
+  /// Converts this [CreateMessageRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -3959,6 +4512,7 @@ class CreateMessageRequestParams extends MCP {
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [CreateMessageRequestParams] from a decoded MCP JSON map.
   factory CreateMessageRequestParams.toMCP(Map<String, Object?> map) {
     return CreateMessageRequestParams(
       messages: (map['messages'] as List<dynamic>)
@@ -3992,20 +4546,25 @@ class CreateMessageRequestParams extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// A request from the server to sample an LLM via the client.
 class CreateMessageRequest extends MCP {
   String method = "sampling/createMessage";
 
   // ignore: deprecated_member_use_from_same_package
   CreateMessageRequestParams params;
 
+  /// Creates a [CreateMessageRequest].
   CreateMessageRequest({required this.params});
 
+  /// Converts this [CreateMessageRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'method': method, 'params': params.toMap()};
   }
 
   // ignore: deprecated_member_use_from_same_package
+  /// Builds a [CreateMessageRequest] from a decoded MCP JSON map.
   factory CreateMessageRequest.toMCP(Map<String, Object?> map) {
     return CreateMessageRequest(
       params: CreateMessageRequestParams.toMCP(
@@ -4019,13 +4578,19 @@ class CreateMessageRequest extends MCP {
   'Deprecated as of protocol version 2026-07-28 (SEP-2577). '
   'Remains in the specification for at least twelve months.',
 )
+
+/// The result returned by the client for a sampling/createMessage request.
 class CreateMessageResult extends MCP {
+  /// The name of the model that generated the message.
   String model;
+
+  /// The reason why sampling stopped, if known.
   String? stopReason;
   Role role;
   List<ContentBlock> content;
   MetaObject? $meta;
 
+  /// Creates a [CreateMessageResult].
   CreateMessageResult({
     required this.model,
     this.stopReason,
@@ -4034,6 +4599,7 @@ class CreateMessageResult extends MCP {
     this.$meta,
   });
 
+  /// Converts this [CreateMessageResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -4045,6 +4611,7 @@ class CreateMessageResult extends MCP {
     };
   }
 
+  /// Builds a [CreateMessageResult] from a decoded MCP JSON map.
   factory CreateMessageResult.toMCP(Map<String, Object?> map) {
     return CreateMessageResult(
       model: map['model'] as String,
@@ -4068,6 +4635,7 @@ class CallToolRequestParams extends InputResponseRequestParams {
   /// Tool call arguments.
   Map<String, Object?>? arguments;
 
+  /// Creates a [CallToolRequestParams].
   CallToolRequestParams({
     required super.$meta,
     super.inputResponses,
@@ -4076,6 +4644,7 @@ class CallToolRequestParams extends InputResponseRequestParams {
     this.arguments,
   });
 
+  /// Converts this [CallToolRequestParams] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -4085,9 +4654,11 @@ class CallToolRequestParams extends InputResponseRequestParams {
     };
   }
 
+  /// Builds a [CallToolRequestParams] from a decoded MCP JSON map.
   factory CallToolRequestParams.toMCP(Map<String, Object?> map) {
     return CallToolRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          (map['_meta'] ?? <String, Object?>{}) as Map<String, Object?>),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
@@ -4103,8 +4674,10 @@ class CallToolRequest extends MCP {
   String method = "tools/call";
   CallToolRequestParams params;
 
+  /// Creates a [CallToolRequest].
   CallToolRequest({required this.id, required this.params});
 
+  /// Converts this [CallToolRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -4115,6 +4688,7 @@ class CallToolRequest extends MCP {
     };
   }
 
+  /// Builds a [CallToolRequest] from a decoded MCP JSON map.
   factory CallToolRequest.toMCP(Map<String, Object?> map) {
     return CallToolRequest(
       id: map['id']?.toString() ?? '-1',
@@ -4131,12 +4705,16 @@ class CallToolResult extends MapMC<String, Object?>
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
   List<ContentBlock> get content => (data['content'] as List<dynamic>)
       .map((e) => ContentBlock.toMCP(e as Map<String, Object?>))
       .toList();
   Map<String, Object?>? get structuredContent =>
       data['structuredContent'] as Map<String, Object?>?;
+
+  /// Whether the tool call ended in an error.
   bool? get isError => data['isError'] as bool?;
 
   set $meta(ResultMetaObject? value) => data['_meta'] = value?.toMap();
@@ -4147,6 +4725,7 @@ class CallToolResult extends MapMC<String, Object?>
       data['structuredContent'] = value;
   set isError(bool? value) => data['isError'] = value;
 
+  /// Creates a [CallToolResult].
   CallToolResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -4163,11 +4742,13 @@ class CallToolResult extends MapMC<String, Object?>
           ...?additionalData,
         });
 
+  /// Converts this [CallToolResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [CallToolResult] from a decoded MCP JSON map.
   factory CallToolResult.toMCP(Map<String, Object?> map) {
     return CallToolResult(
       $meta: map['_meta'] != null
@@ -4192,18 +4773,22 @@ class CallToolResult extends MapMC<String, Object?>
   }
 }
 
+/// A successful response from the server for a tools/call request.
 class CallToolResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   CallToolResultOutcome result;
 
+  /// Creates a [CallToolResultResponse].
   CallToolResultResponse({required this.id, required this.result});
 
+  /// Converts this [CallToolResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [CallToolResultResponse] from a decoded MCP JSON map.
   factory CallToolResultResponse.toMCP(Map<String, Object?> map) {
     return CallToolResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -4214,14 +4799,17 @@ class CallToolResultResponse extends MCP {
   }
 }
 
+/// Sent from the client to request a list of tools the server has.
 class ListToolsRequest extends MCP {
   String jsonrpc = "2.0";
   String id;
   String method = "tools/list";
   PaginatedRequestParams? params;
 
+  /// Creates a [ListToolsRequest].
   ListToolsRequest({required this.id, this.params});
 
+  /// Converts this [ListToolsRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -4232,6 +4820,7 @@ class ListToolsRequest extends MCP {
     };
   }
 
+  /// Builds a [ListToolsRequest] from a decoded MCP JSON map.
   factory ListToolsRequest.toMCP(Map<String, Object?> map) {
     return ListToolsRequest(
       id: map['id']?.toString() ?? '-1',
@@ -4242,18 +4831,22 @@ class ListToolsRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a tools/list request.
 class ListToolsResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   ListToolsResult result;
 
+  /// Creates a [ListToolsResultResponse].
   ListToolsResultResponse({required this.id, required this.result});
 
+  /// Converts this [ListToolsResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [ListToolsResultResponse] from a decoded MCP JSON map.
   factory ListToolsResultResponse.toMCP(Map<String, Object?> map) {
     return ListToolsResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -4262,15 +4855,22 @@ class ListToolsResultResponse extends MCP {
   }
 }
 
+/// The result returned by the server for a tools/list request.
 class ListToolsResult extends MapMC<String, Object?> {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
+
+  /// An opaque token representing the pagination position after the last returned result.
   String? get nextCursor => data['nextCursor'] as String?;
   List<Tool> get tools => (data['tools'] as List<dynamic>)
       .map((e) => Tool.toMCP(e as Map<String, Object?>))
       .toList();
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -4282,6 +4882,7 @@ class ListToolsResult extends MapMC<String, Object?> {
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [ListToolsResult].
   ListToolsResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -4300,11 +4901,13 @@ class ListToolsResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [ListToolsResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [ListToolsResult] from a decoded MCP JSON map.
   factory ListToolsResult.toMCP(Map<String, Object?> map) {
     return ListToolsResult(
       $meta: map['_meta'] != null
@@ -4342,8 +4945,10 @@ class DiscoverRequest extends MCP {
   String method = "server/discover";
   RequestParams params;
 
+  /// Creates a [DiscoverRequest].
   DiscoverRequest({required this.id, required this.params});
 
+  /// Converts this [DiscoverRequest] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {
@@ -4354,6 +4959,7 @@ class DiscoverRequest extends MCP {
     };
   }
 
+  /// Builds a [DiscoverRequest] from a decoded MCP JSON map.
   factory DiscoverRequest.toMCP(Map<String, Object?> map) {
     return DiscoverRequest(
       id: map['id']?.toString() ?? '-1',
@@ -4362,18 +4968,22 @@ class DiscoverRequest extends MCP {
   }
 }
 
+/// A successful response from the server for a server/discover request.
 class DiscoverResultResponse extends MCP {
   String jsonrpc = "2.0";
   String id;
   DiscoverResult result;
 
+  /// Creates a [DiscoverResultResponse].
   DiscoverResultResponse({required this.id, required this.result});
 
+  /// Converts this [DiscoverResultResponse] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
+  /// Builds a [DiscoverResultResponse] from a decoded MCP JSON map.
   factory DiscoverResultResponse.toMCP(Map<String, Object?> map) {
     return DiscoverResultResponse(
       id: map['id']?.toString() ?? '-1',
@@ -4388,12 +4998,18 @@ class DiscoverResult extends MapMC<String, Object?> {
   ResultMetaObject? get $meta => data['_meta'] != null
       ? ResultMetaObject.toMCP(data['_meta'] as Map<String, Object?>)
       : null;
+
+  /// Indicates the type of the result, which allows the client to determine how to parse the result object.
   String get resultType => data['resultType'] as String? ?? 'complete';
   List<String> get supportedVersions =>
       (data['supportedVersions'] as List<dynamic>).cast<String>();
   ServerCapabilities get capabilities =>
       ServerCapabilities.toMCP(data['capabilities'] as Map<String, Object?>);
+
+  /// Natural-language guidance describing the server and its features.
   String? get instructions => data['instructions'] as String?;
+
+  /// A hint from the server indicating how long (in milliseconds) the client MAY cache this response before re-fetching.
   num get ttlMs => data['ttlMs'] as num;
   CacheScope get cacheScope => CacheScope.to(data['cacheScope'] as String);
 
@@ -4407,6 +5023,7 @@ class DiscoverResult extends MapMC<String, Object?> {
   set ttlMs(num value) => data['ttlMs'] = value;
   set cacheScope(CacheScope value) => data['cacheScope'] = value.toString();
 
+  /// Creates a [DiscoverResult].
   DiscoverResult({
     ResultMetaObject? $meta,
     String resultType = 'complete',
@@ -4427,11 +5044,13 @@ class DiscoverResult extends MapMC<String, Object?> {
           ...?additionalData,
         });
 
+  /// Converts this [DiscoverResult] into a JSON-compatible map.
   @override
   Map<String, Object?> toMap() {
     return data;
   }
 
+  /// Builds a [DiscoverResult] from a decoded MCP JSON map.
   factory DiscoverResult.toMCP(Map<String, Object?> map) {
     return DiscoverResult(
       $meta: map['_meta'] != null
@@ -4468,6 +5087,7 @@ class DiscoverResult extends MapMC<String, Object?> {
 /// headers are missing/malformed. For HTTP, the response status MUST be
 /// `400 Bad Request`.
 class HeaderMismatchError extends Error {
+  /// Creates a [HeaderMismatchError].
   HeaderMismatchError({required super.message, super.data})
       : super(code: -32020);
 }
@@ -4475,6 +5095,7 @@ class HeaderMismatchError extends Error {
 /// Returned when a request omits a client capability the server requires
 /// for the requested operation.
 class MissingRequiredClientCapabilityError extends Error {
+  /// Creates a [MissingRequiredClientCapabilityError].
   MissingRequiredClientCapabilityError({
     required super.message,
     required ClientCapabilities requiredCapabilities,
@@ -4487,6 +5108,7 @@ class MissingRequiredClientCapabilityError extends Error {
 /// Returned when a server does not support the protocol version requested
 /// via `RequestMetaObject["io.modelcontextprotocol/protocolVersion"]`.
 class UnsupportedProtocolVersionError extends Error {
+  /// Creates an [UnsupportedProtocolVersionError].
   UnsupportedProtocolVersionError({
     required super.message,
     required List<String> supported,
