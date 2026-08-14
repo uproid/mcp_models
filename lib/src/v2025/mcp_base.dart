@@ -2777,7 +2777,7 @@ class GetPromptResultResponse extends MCP {
 
   @override
   Map<String, Object?> toMap() {
-    return {'jsonrpc': jsonrpc, 'id': id, 'result': result};
+    return {'jsonrpc': jsonrpc, 'id': id, 'result': result.toMap()};
   }
 
   factory GetPromptResultResponse.toMCP(Map<String, Object?> map) {
