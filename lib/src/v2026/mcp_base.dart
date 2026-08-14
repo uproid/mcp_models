@@ -4076,7 +4076,8 @@ class CallToolRequestParams extends InputResponseRequestParams {
 
   factory CallToolRequestParams.toMCP(Map<String, Object?> map) {
     return CallToolRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          (map['_meta'] ?? <String, Object?>{}) as Map<String, Object?>),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
