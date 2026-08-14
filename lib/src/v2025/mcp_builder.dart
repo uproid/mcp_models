@@ -12,21 +12,30 @@ typedef MethodHandler = Future<MCP> Function(Map<String, Object?> payload);
 
 // ── Internal registration entries ─────────────────────────────────────────────
 
+/// The MCP `_ToolEntry` schema type.
 class _ToolEntry {
   final Tool tool;
   final ToolHandler handler;
+
+  /// Creates a [_ToolEntry].
   _ToolEntry(this.tool, this.handler);
 }
 
+/// The MCP `_ResourceEntry` schema type.
 class _ResourceEntry {
   final Resource resource;
   final ResourceHandler handler;
+
+  /// Creates a [_ResourceEntry].
   _ResourceEntry(this.resource, this.handler);
 }
 
+/// The MCP `_PromptEntry` schema type.
 class _PromptEntry {
   final Prompt prompt;
   final PromptHandler handler;
+
+  /// Creates a [_PromptEntry].
   _PromptEntry(this.prompt, this.handler);
 }
 

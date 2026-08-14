@@ -1,3 +1,4 @@
+/// Dart models for the MCP (Model Context Protocol) 2026-07-28 schema.
 library;
 
 export 'src/mcp.dart';
