@@ -576,10 +576,12 @@ class RequestMetaObject extends MapMC<String, Object?> {
   factory RequestMetaObject.toMCP(Map<String, Object?> map) {
     return RequestMetaObject(
       progressToken: map['progressToken']?.toString(),
-      protocolVersion: map['io.modelcontextprotocol/protocolVersion'] as String,
+      protocolVersion: map['io.modelcontextprotocol/protocolVersion'] as String? ??
+          '2025-11-25',
       clientCapabilities: ClientCapabilities.toMCP(
         map['io.modelcontextprotocol/clientCapabilities']
-            as Map<String, Object?>,
+                as Map<String, Object?>? ??
+            <String, Object?>{},
       ),
       clientInfo: map['io.modelcontextprotocol/clientInfo'] != null
           ? Implementation.toMCP(
@@ -624,7 +626,8 @@ class PaginatedRequestParams extends MCP {
   factory PaginatedRequestParams.toMCP(Map<String, Object?> map) {
     return PaginatedRequestParams(
       cursor: map['cursor'] as String?,
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
     );
   }
 }
@@ -661,7 +664,8 @@ class InputResponseRequestParams extends MCP {
 
   factory InputResponseRequestParams.toMCP(Map<String, Object?> map) {
     return InputResponseRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
     );
@@ -1120,7 +1124,8 @@ class CompleteRequestParams extends MCP {
 
   factory CompleteRequestParams.toMCP(Map<String, Object?> map) {
     return CompleteRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       ref: Reference.toMCP(map['ref'] as Map<String, Object?>),
       argument: CompleteRequestParamsArgument.toMCP(
         map['argument'] as Map<String, Object?>,
@@ -2218,7 +2223,8 @@ class RequestParams extends MCP {
 
   factory RequestParams.toMCP(Map<String, Object?> map) {
     return RequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
     );
   }
 }
@@ -2299,7 +2305,8 @@ class GetPromptRequestParams extends InputResponseRequestParams {
 
   factory GetPromptRequestParams.toMCP(Map<String, Object?> map) {
     return GetPromptRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       name: map['name'] as String,
@@ -2847,7 +2854,8 @@ class ReadResourceRequestParams extends InputResponseRequestParams {
 
   factory ReadResourceRequestParams.toMCP(Map<String, Object?> map) {
     return ReadResourceRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       inputResponses: map['inputResponses'],
       requestState: map['requestState'] as String?,
       uri: map['uri'] as String,
@@ -3186,7 +3194,8 @@ class SubscriptionsListenRequestParams extends MCP {
 
   factory SubscriptionsListenRequestParams.toMCP(Map<String, Object?> map) {
     return SubscriptionsListenRequestParams(
-      $meta: RequestMetaObject.toMCP(map['_meta'] as Map<String, Object?>),
+      $meta: RequestMetaObject.toMCP(
+          map['_meta'] as Map<String, Object?>? ?? <String, Object?>{}),
       notifications: SubscriptionFilter.toMCP(
         map['notifications'] as Map<String, Object?>,
       ),
